@@ -1,14 +1,28 @@
 {
-  "name": "acta-mundi",
+  "name": "actamundi",
   "version": "0.1.0",
   "private": true,
+  "description": "A decentralized news platform combining traditional journalism with blockchain technology",
+  "keywords": [
+    "news",
+    "blockchain",
+    "dapp",
+    "journalism",
+    "web3",
+    "content-management",
+    "monetization"
+  ],
+  "author": "P-Sivakumaran",
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "init-db": "ts-node scripts/init-db.ts",
-    "seed": "ts-node scripts/seed-articles.ts"
+    "seed": "ts-node scripts/seed-articles.ts",
+    "test": "jest",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@cloudinary/url-gen": "^1.21.0",

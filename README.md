@@ -1,81 +1,134 @@
-# Acta Mundi
+# ActaMundi - Decentralized News Platform
 
-A sophisticated magazine website inspired by The New Yorker, The Monthly, and Saturday Paper style. Built with Next.js and Tailwind CSS.
+ActaMundi is a modern decentralized news platform that combines traditional journalism with blockchain technology. It provides a secure, transparent, and monetizable platform for news content while maintaining professional editorial standards.
 
-## Features
+## Key Features
 
-- Modern, responsive design
-- Beautiful typography with Playfair Display and Inter fonts
-- Featured article section with full-width hero image
-- Latest articles grid
-- Newsletter subscription
-- Clean, elegant layout suitable for long-form journalism
+- **Decentralized Architecture**: Built on blockchain technology for transparency and immutability
+- **Professional News Management**: 
+  - Rich text editor for professional journalism
+  - Article versioning and history
+  - Editorial workflow management
+  - Category and tag organization
+- **Monetization Ready**:
+  - Subscription system integration
+  - Premium content management
+  - Ad placement optimization
+  - Revenue tracking dashboard
+- **Content Security**:
+  - Blockchain-based content verification
+  - Immutable article history
+  - Author attribution system
+- **Modern Publishing Tools**:
+  - Rich text editor with media support
+  - SEO optimization
+  - Social media integration
+  - Analytics dashboard
+- **Admin Dashboard**: Secure interface for content management
+- **Responsive Design**: Mobile-first approach for all devices
+- **Image Management**: Optimized image handling with Cloudinary
+- **Authentication**: Secure access with NextAuth.js
+
+## Tech Stack
+
+- **Framework**: Next.js 14 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui
+- **Database**: MongoDB (with blockchain integration)
+- **Authentication**: NextAuth.js
+- **Rich Text Editor**: TipTap
+- **Image Storage**: Cloudinary
+- **Blockchain Integration**: Ethereum/Solana (configurable)
+- **Deployment**: Vercel (recommended)
+
+## Business Value
+
+ActaMundi is designed as a turnkey solution for:
+- Independent news publishers
+- Digital media entrepreneurs
+- Content creators looking to monetize
+- News organizations transitioning to Web3
+
+### Revenue Streams
+- Subscription management
+- Premium content access
+- Advertising integration
+- Sponsored content
+- Token-based rewards system
 
 ## Getting Started
 
-### Prerequisites
-
-- Node.js 18.17 or later
-- npm or yarn
-
-### Installation
-
 1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/acta-mundi.git
-cd acta-mundi
-```
+   ```bash
+   git clone https://github.com/P-Sivakumaran/actamundi.git
+   cd actamundi
+   ```
 
 2. Install dependencies:
-```bash
-npm install
-# or
-yarn install
-```
+   ```bash
+   npm install
+   ```
 
-3. Run the development server:
-```bash
-npm run dev
-# or
-yarn dev
-```
+3. Set up environment variables:
+   Create a `.env.local` file with the following variables:
+   ```
+   MONGODB_URI=your_mongodb_uri
+   NEXTAUTH_SECRET=your_secret_key
+   NEXTAUTH_URL=http://localhost:3000
+   
+   # Blockchain Configuration
+   BLOCKCHAIN_NETWORK=ethereum
+   BLOCKCHAIN_RPC_URL=your_rpc_url
+   
+   # Cloudinary Configuration
+   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
+   CLOUDINARY_API_KEY=your_api_key
+   CLOUDINARY_API_SECRET=your_api_secret
+   NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=your_upload_preset
+   ```
 
-4. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Project Structure
 
 ```
-acta-mundi/
+actamundi/
 ├── app/
-│   ├── layout.tsx      # Root layout with navigation and footer
-│   ├── page.tsx        # Home page with featured and latest articles
-│   └── globals.css     # Global styles and Tailwind imports
-├── components/         # Reusable components
-├── public/            # Static assets
-└── styles/            # Additional styles
+│   ├── (public)/        # Public routes
+│   ├── admin/          # Admin dashboard
+│   ├── api/            # API routes
+│   ├── articles/       # Article pages
+│   ├── auth/          # Authentication
+│   └── setup/         # Initial setup
+├── components/        # Reusable components
+├── lib/              # Utility functions
+├── models/           # Data models
+├── scripts/          # Utility scripts
+└── types/            # TypeScript types
 ```
 
 ## Development
 
-- The site is built with Next.js 14 and uses the App Router
-- Styling is done with Tailwind CSS
-- Images are optimized using Next.js Image component
-- The design is mobile-first and responsive
+- `npm run dev`: Start development server
+- `npm run build`: Build for production
+- `npm run start`: Start production server
+- `npm run lint`: Run ESLint
+- `npm run seed`: Seed the database with sample articles
 
-## Deployment
+## Business Model
 
-The site can be deployed to any platform that supports Next.js, such as:
-- Vercel (recommended)
-- Netlify
-- AWS Amplify
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+ActaMundi is designed as a complete business solution with:
+- Multiple revenue streams
+- Scalable architecture
+- Professional content management
+- Blockchain integration
+- Monetization features
 
 ## License
 
