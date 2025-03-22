@@ -1,13 +1,14 @@
 import type { Metadata } from 'next'
 import { Inter, Playfair_Display } from 'next/font/google'
 import './globals.css'
+import { NetworkIndicator } from '@/components/NetworkIndicator'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' })
 
 export const metadata: Metadata = {
-  title: 'Acta Mundi',
-  description: 'A magazine of ideas, culture, and politics',
+  title: 'Acta Mundi - Decentralized News Platform',
+  description: 'A modern decentralized news platform combining traditional journalism with blockchain technology',
 }
 
 export default function RootLayout({
@@ -38,6 +39,7 @@ export default function RootLayout({
               </div>
             </div>
           </nav>
+          <NetworkIndicator />
         </header>
         <main>{children}</main>
         <footer className="bg-gray-50 border-t border-gray-200 mt-16">
