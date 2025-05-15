@@ -5,9 +5,14 @@ if (!process.env.MONGODB_URI) {
 }
 
 const uri = process.env.MONGODB_URI
-const options = {}
+const options = {
+  maxPoolSize: 10,
+  minPoolSize: 5,
+  maxIdleTimeMS: 30000,
+  connectTimeoutMS: 10000,
+}
 
-let client
+let client: MongoClient
 let clientPromise: Promise<MongoClient>
 
 if (process.env.NODE_ENV === 'development') {
@@ -28,10 +33,46 @@ if (process.env.NODE_ENV === 'development') {
   clientPromise = client.connect()
 }
 
-export default clientPromise
+export class DatabaseError extends Error {
+  constructor(message: string, public code?: string) {
+    super(message)
+    this.name = 'DatabaseError'
+  }
+}
 
-export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
-  const client = await clientPromise
-  const db = client.db('actamundi')
-  return { client, db }
-} 
+export async function connectToDatabase(): Promise<{ db: Db; client: MongoClient }> {
+  try {
+    const client = await clientPromise
+    const db = client.db(process.env.MONGODB_DB)
+    return { db, client }
+  } catch (error) {
+    throw new DatabaseError(
+      'Failed to connect to database',
+      error instanceof Error ? error.message : 'unknown'
+    )
+  }
+}
+
+export async function withTransaction<T>(
+  operation: (db: Db) => Promise<T>
+): Promise<T> {
+  const { db, client } = await connectToDatabase()
+  const session = client.startSession()
+  
+  try {
+    let result: T
+    await session.withTransaction(async () => {
+      result = await operation(db)
+    })
+    return result!
+  } catch (error) {
+    throw new DatabaseError(
+      'Transaction failed',
+      error instanceof Error ? error.message : 'unknown'
+    )
+  } finally {
+    await session.endSession()
+  }
+}
+
+export default clientPromise 

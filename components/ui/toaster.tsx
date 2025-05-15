@@ -1,3 +1,5 @@
+"use client"
+
 import {
   Toast,
   ToastClose,
@@ -27,7 +29,7 @@ export function Toaster() {
           </Toast>
         )
       })}
-      <ToastViewport />
+      <ToastViewport className="bottom-0 right-0"/>
     </ToastProvider>
   )
 } 

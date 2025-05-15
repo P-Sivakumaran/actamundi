@@ -26,9 +26,11 @@ export default function ArticlePreview({ article }: ArticlePreviewProps) {
       <header className="mb-8">
         <h1 className="text-4xl font-bold mb-4">{article.title}</h1>
         <div className="flex items-center gap-4 text-muted-foreground">
-          <time dateTime={article.publishedAt}>
-            {formatDate(article.publishedAt)}
-          </time>
+          {article.publishedAt && (
+            <time dateTime={article.publishedAt}>
+              {formatDate(article.publishedAt)}
+            </time>
+          )}
           {article.category && (
             <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
               {article.category}

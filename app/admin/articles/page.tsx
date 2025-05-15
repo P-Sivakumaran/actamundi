@@ -54,6 +54,7 @@ export default function ArticlesPage() {
     if (!confirm('Are you sure you want to delete this article?')) return
 
     try {
+      // Try to delete by slug first
       const response = await fetch(`/api/articles/${slug}`, {
         method: 'DELETE',
       })

@@ -1,19 +1,22 @@
 import { ObjectId } from 'mongodb'
 
 export interface Article {
-  id: string
+  _id: string
   title: string
   content: string
-  excerpt: string
+  excerpt?: string
   coverImage?: string
   category?: string
   status: 'draft' | 'published'
-  authorId: string
+  authorId?: string
   createdAt: string
   updatedAt: string
   publishedAt?: string
   tags?: string[]
   slug: string
+  readingTime: number
+  featured?: boolean
+  views?: number
 }
 
 export interface Comment {

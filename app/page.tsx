@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { CategoryTag } from '@/components/CategoryTag'
 
 const featuredArticle = {
   title: "The Future of Democracy in the Digital Age",
@@ -52,19 +53,22 @@ export default function Home() {
           />
           <div className="absolute inset-0 bg-black bg-opacity-40" />
         </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-white">
-          <div className="max-w-2xl">
-            <span className="text-sm font-semibold tracking-wider uppercase">
-              {featuredArticle.category}
-            </span>
-            <h1 className="mt-4 text-4xl md:text-6xl font-serif font-bold">
+        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 text-white">
+          <div className="max-w-2xl lg:max-w-3xl xl:max-w-4xl">
+            <CategoryTag 
+              category={featuredArticle.category}
+              variant="default"
+              size="md"
+              className="bg-opacity-25 backdrop-blur-sm bg-black text-white border-white/30 mb-4 inline-block"
+            />
+            <h1 className="mt-4 text-fluid-4xl md:text-fluid-5xl font-serif font-bold leading-tight space-fluid-4">
               {featuredArticle.title}
             </h1>
-            <p className="mt-6 text-xl">
+            <p className="text-fluid-xl leading-snug space-fluid-5">
               {featuredArticle.excerpt}
             </p>
             <div className="mt-8 flex items-center">
-              <span className="text-sm">
+              <span className="text-fluid-sm">
                 By {featuredArticle.author} • {featuredArticle.date}
               </span>
             </div>
@@ -74,11 +78,11 @@ export default function Home() {
 
       {/* Latest Articles */}
       <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-serif font-bold mb-12">Latest Articles</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="container mx-auto">
+          <h2 className="text-fluid-3xl font-serif font-bold space-fluid-6 text-foreground">Latest Articles</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {latestArticles.map((article, index) => (
-              <article key={index} className="group">
+              <article key={index} className="group rhythm">
                 <div className="relative h-64 mb-4 overflow-hidden rounded-lg">
                   <Image
                     src={article.image}
@@ -87,19 +91,22 @@ export default function Home() {
                     className="object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
-                <div>
-                  <span className="text-sm font-semibold tracking-wider uppercase text-accent">
-                    {article.category}
-                  </span>
-                  <h3 className="mt-2 text-xl font-serif font-bold">
+                <div className="rhythm-tight">
+                  <CategoryTag 
+                    category={article.category}
+                    size="sm"
+                    variant="default"
+                    href={`/${article.category.toLowerCase()}`}
+                  />
+                  <h3 className="text-fluid-xl font-serif font-bold leading-snug text-foreground">
                     <Link href="#" className="hover:text-accent transition-colors">
                       {article.title}
                     </Link>
                   </h3>
-                  <p className="mt-2 text-secondary">
+                  <p className="text-fluid-base text-gray-800">
                     {article.excerpt}
                   </p>
-                  <div className="mt-4 flex items-center text-sm text-secondary">
+                  <div className="flex items-center text-fluid-sm text-gray-700">
                     <span>By {article.author} • {article.date}</span>
                   </div>
                 </div>
@@ -111,24 +118,31 @@ export default function Home() {
 
       {/* Newsletter Section */}
       <section className="bg-gray-50 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-3xl font-serif font-bold mb-4">Stay Updated</h2>
-            <p className="text-secondary mb-8">
+        <div className="container mx-auto">
+          <div className="max-w-2xl mx-auto text-center rhythm">
+            <h2 className="text-fluid-3xl font-serif font-bold space-fluid-2">Stay Updated</h2>
+            <p className="text-fluid-lg text-gray-700 dark:text-gray-300 space-fluid-5">
               Subscribe to our newsletter for weekly insights and analysis.
             </p>
-            <form className="flex gap-4">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
-              />
-              <button
-                type="submit"
-                className="px-6 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-colors"
-              >
-                Subscribe
-              </button>
+            <form className="flex flex-col gap-4 text-left">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="flex-1 px-4 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-600 text-gray-900 placeholder-gray-500"
+                  aria-label="Email address"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-primary-700 text-white rounded-md hover:bg-primary-800 transition-colors sm:w-auto w-full"
+                >
+                  Subscribe
+                </button>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                I agree to receive the ActaMundi newsletter and understand that I can unsubscribe at any time.
+              </div>
             </form>
           </div>
         </div>

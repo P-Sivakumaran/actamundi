@@ -7,6 +7,7 @@ export interface NetworkConfig {
   chainId: number;
   rpcUrl: string;
   explorerUrl: string;
+  color: 'blue' | 'green' | 'purple' | 'orange' | 'red';
   currency: {
     name: string;
     symbol: string;
@@ -20,6 +21,7 @@ export const SUPPORTED_NETWORKS: Record<Network, NetworkConfig> = {
     chainId: 1,
     rpcUrl: process.env.NEXT_PUBLIC_ETH_RPC_URL || 'https://eth-mainnet.g.alchemy.com/v2/your-api-key',
     explorerUrl: 'https://etherscan.io',
+    color: 'blue',
     currency: {
       name: 'Ether',
       symbol: 'ETH',
@@ -31,6 +33,7 @@ export const SUPPORTED_NETWORKS: Record<Network, NetworkConfig> = {
     chainId: 137,
     rpcUrl: process.env.NEXT_PUBLIC_POLYGON_RPC_URL || 'https://polygon-mainnet.g.alchemy.com/v2/your-api-key',
     explorerUrl: 'https://polygonscan.com',
+    color: 'purple',
     currency: {
       name: 'MATIC',
       symbol: 'MATIC',
@@ -42,6 +45,7 @@ export const SUPPORTED_NETWORKS: Record<Network, NetworkConfig> = {
     chainId: 42161,
     rpcUrl: process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || 'https://arb-mainnet.g.alchemy.com/v2/your-api-key',
     explorerUrl: 'https://arbiscan.io',
+    color: 'blue',
     currency: {
       name: 'Ether',
       symbol: 'ETH',
@@ -53,6 +57,7 @@ export const SUPPORTED_NETWORKS: Record<Network, NetworkConfig> = {
     chainId: 10,
     rpcUrl: process.env.NEXT_PUBLIC_OPTIMISM_RPC_URL || 'https://opt-mainnet.g.alchemy.com/v2/your-api-key',
     explorerUrl: 'https://optimistic.etherscan.io',
+    color: 'red',
     currency: {
       name: 'Ether',
       symbol: 'ETH',
@@ -64,6 +69,7 @@ export const SUPPORTED_NETWORKS: Record<Network, NetworkConfig> = {
     chainId: 8453,
     rpcUrl: process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org',
     explorerUrl: 'https://basescan.org',
+    color: 'blue',
     currency: {
       name: 'Ether',
       symbol: 'ETH',
@@ -79,10 +85,13 @@ export function getNetworkConfig(network: Network): NetworkConfig {
 }
 
 export async function detectNetwork(): Promise<Network> {
-  if (typeof window === 'undefined') return DEFAULT_NETWORK;
+  if (typeof window === 'undefined' || !window.ethereum) return DEFAULT_NETWORK;
 
   try {
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    // Check if ethereum is available
+    if (!window.ethereum) return DEFAULT_NETWORK;
+    
+    const provider = new ethers.BrowserProvider(window.ethereum as any);
     const network = await provider.getNetwork();
     
     // Find matching network

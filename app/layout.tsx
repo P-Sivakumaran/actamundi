@@ -1,14 +1,33 @@
 import type { Metadata } from 'next'
-import { Inter, Playfair_Display } from 'next/font/google'
+import { Bodoni_Moda, Lato } from 'next/font/google'
 import './globals.css'
 import { NetworkIndicator } from '@/components/NetworkIndicator'
+import { StyledComponentsRegistry } from '@/lib/styled-registry'
+import { ThemeProvider } from '@/components/providers/ThemeProvider'
+import { Toaster } from '@/components/ui/toaster'
+import { ThemeSwitcher } from '@/components/ui/theme-switcher'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { SkipLink } from '@/components/ui/skiplink'
+import Link from 'next/link'
+import { ErrorProvider } from '@/components/providers/ErrorProvider'
+import { CopyrightYear } from '@/components/ui/copyright-year'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' })
+const bodoniModa = Bodoni_Moda({
+  subsets: ['latin'],
+  variable: '--font-bodoni-moda',
+  display: 'swap',
+})
+
+const lato = Lato({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-lato',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
-  title: 'Acta Mundi - Decentralized News Platform',
-  description: 'A modern decentralized news platform combining traditional journalism with blockchain technology',
+  title: 'ActaMundi - Decentralized News Platform',
+  description: 'A decentralized platform for verified news and information',
 }
 
 export default function RootLayout({
@@ -17,74 +36,91 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
-      <body className="font-sans antialiased">
-        <header className="border-b border-gray-200">
-          <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex">
-                <div className="flex-shrink-0 flex items-center">
-                  <a href="/" className="text-2xl font-serif font-bold text-primary">
-                    Acta Mundi
-                  </a>
-                </div>
-              </div>
-              <div className="flex items-center space-x-8">
-                <a href="/politics" className="text-secondary hover:text-primary">Politics</a>
-                <a href="/culture" className="text-secondary hover:text-primary">Culture</a>
-                <a href="/ideas" className="text-secondary hover:text-primary">Ideas</a>
-                <a href="/subscribe" className="bg-primary text-white px-4 py-2 rounded-md hover:bg-opacity-90">
-                  Subscribe
-                </a>
-              </div>
-            </div>
-          </nav>
-          <NetworkIndicator />
-        </header>
-        <main>{children}</main>
-        <footer className="bg-gray-50 border-t border-gray-200 mt-16">
-          <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              <div>
-                <h3 className="text-sm font-semibold text-primary tracking-wider uppercase">About</h3>
-                <ul className="mt-4 space-y-4">
-                  <li><a href="/about" className="text-secondary hover:text-primary">About Us</a></li>
-                  <li><a href="/contact" className="text-secondary hover:text-primary">Contact</a></li>
-                  <li><a href="/careers" className="text-secondary hover:text-primary">Careers</a></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-primary tracking-wider uppercase">Sections</h3>
-                <ul className="mt-4 space-y-4">
-                  <li><a href="/politics" className="text-secondary hover:text-primary">Politics</a></li>
-                  <li><a href="/culture" className="text-secondary hover:text-primary">Culture</a></li>
-                  <li><a href="/ideas" className="text-secondary hover:text-primary">Ideas</a></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-primary tracking-wider uppercase">Legal</h3>
-                <ul className="mt-4 space-y-4">
-                  <li><a href="/privacy" className="text-secondary hover:text-primary">Privacy Policy</a></li>
-                  <li><a href="/terms" className="text-secondary hover:text-primary">Terms of Service</a></li>
-                  <li><a href="/cookies" className="text-secondary hover:text-primary">Cookie Policy</a></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-primary tracking-wider uppercase">Connect</h3>
-                <ul className="mt-4 space-y-4">
-                  <li><a href="/newsletter" className="text-secondary hover:text-primary">Newsletter</a></li>
-                  <li><a href="/rss" className="text-secondary hover:text-primary">RSS Feed</a></li>
-                  <li><a href="/social" className="text-secondary hover:text-primary">Social Media</a></li>
-                </ul>
-              </div>
-            </div>
-            <div className="mt-8 border-t border-gray-200 pt-8">
-              <p className="text-center text-secondary text-sm">
-                © {new Date().getFullYear()} Acta Mundi. All rights reserved.
-              </p>
-            </div>
-          </div>
-        </footer>
+    <html lang="en" className={`${bodoniModa.variable} ${lato.variable}`} suppressHydrationWarning>
+      <body className="font-sans antialiased bg-background text-foreground">
+        <ThemeProvider>
+          <StyledComponentsRegistry>
+            <ErrorProvider>
+              <ErrorBoundary>
+                <SkipLink href="#main-content" />
+                <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                  <div className="container flex h-16 items-center justify-between">
+                    <div className="flex items-center">
+                      <Link href="/" className="flex items-center space-x-2 mr-8">
+                        <span className="text-xl font-bold text-primary">ActaMundi</span>
+                      </Link>
+                      
+                      <nav className="hidden md:flex items-center space-x-6">
+                        <Link href="/politics" className="text-sm font-medium text-gray-700 hover:text-primary transition-colors dark:text-gray-300">
+                          Politics
+                        </Link>
+                        <Link href="/culture" className="text-sm font-medium text-gray-700 hover:text-primary transition-colors dark:text-gray-300">
+                          Culture
+                        </Link>
+                        <Link href="/ideas" className="text-sm font-medium text-gray-700 hover:text-primary transition-colors dark:text-gray-300">
+                          Ideas
+                        </Link>
+                      </nav>
+                    </div>
+                    
+                    <div className="flex items-center space-x-4">
+                      <ThemeSwitcher />
+                      <NetworkIndicator />
+                      <Link href="/subscribe" className="hidden md:inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
+                        Subscribe
+                      </Link>
+                    </div>
+                  </div>
+                </header>
+                <main id="main-content" className="flex-1 container py-8 bg-white dark:bg-gray-800 rounded-xl shadow-md border border-border my-8">{children}</main>
+                <footer className="border-t bg-muted/40">
+                  <div className="container py-12">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground tracking-wider uppercase mb-4">About</h3>
+                        <ul className="space-y-3">
+                          <li><Link href="/about" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">About Us</Link></li>
+                          <li><Link href="/contact" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Contact</Link></li>
+                          <li><Link href="/careers" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Careers</Link></li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground tracking-wider uppercase mb-4">Sections</h3>
+                        <ul className="space-y-3">
+                          <li><Link href="/politics" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Politics</Link></li>
+                          <li><Link href="/culture" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Culture</Link></li>
+                          <li><Link href="/ideas" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Ideas</Link></li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground tracking-wider uppercase mb-4">Legal</h3>
+                        <ul className="space-y-3">
+                          <li><Link href="/privacy" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Privacy Policy</Link></li>
+                          <li><Link href="/terms" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Terms of Service</Link></li>
+                          <li><Link href="/cookies" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Cookie Policy</Link></li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground tracking-wider uppercase mb-4">Connect</h3>
+                        <ul className="space-y-3">
+                          <li><Link href="/newsletter" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Newsletter</Link></li>
+                          <li><Link href="/rss" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">RSS Feed</Link></li>
+                          <li><Link href="/social" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Social Media</Link></li>
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="border-t pt-8">
+                      <p className="text-center text-sm text-gray-700 dark:text-gray-300">
+                        © <CopyrightYear /> ActaMundi. All rights reserved.
+                      </p>
+                    </div>
+                  </div>
+                </footer>
+                <Toaster />
+              </ErrorBoundary>
+            </ErrorProvider>
+          </StyledComponentsRegistry>
+        </ThemeProvider>
       </body>
     </html>
   )
