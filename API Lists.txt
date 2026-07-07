@@ -1,0 +1,43 @@
+Core Free API Sources
+
+Metals-API: Real-time and historical precious metals rates, currency conversion, and fluctuation data for gold, silver, platinum, and palladium in 170+ currencies.​ Google Login But PAID!
+
+GoldAPI.io: 100% real-time gold and silver spot prices, easy RESTful JSON interface.​ Google Login: goldapi-gssy931smi38x3nv-io
+
+MetalpriceAPI: Live and historical rates with bid/ask spreads for gold and other metals in 150+ currencies, with options for historic analysis.​
+
+Metals.Dev: Spot and historical prices for gold, silver, platinum, palladium, sourced from trusted exchanges and banks.​
+
+GoldPricez: Live gold and silver rates, customizable for units, purity, and major currencies. Free tier supports reasonable request limits and real-time updates.​
+
+Gold-API.com: Real-time and historical gold, silver, and Bitcoin prices, available for free with a RESTful JSON interface.​
+
+Commodities-API: Free and simple access to current and historical prices for multiple commodities, including gold.​
+
+Trading Economics: Near real-time global economic calendar, accurate data sourced from official bodies. Also provides macroeconomic indicators, consensus forecasts, and revision histories.​
+
+FinanceFlowAPI & Financial Modeling Prep: Real-time and historical financial data (including commodities and economic indicators) and calendars with announcement timers and impact metrics.​
+
+Supplementary Data & Calendar APIs
+RapidAPI Ultimate Economic Calendar: Aggregates financial events and releases for global markets in a structured format.​
+
+Apify Economic Calendar: Key global events and economic releases for financial markets, often with free plans available.​
+
+World Gold Council: Offers comprehensive gold market data, spot prices, market history, and expert insights—useful both for API data and article inspiration.​
+
+Reddit and Finance Forums: Not API-based, but popular for discovering breaking news, retail sentiment, and viral content ideas for timely articles and posts.​
+
+Ideas for High-Traffic Features
+Live Precious Metals Ticker: Always-on price display for gold, silver, etc.
+
+Economic Release Timers: Live countdowns and calendars for key global economic events impacting gold prices.
+
+Historical Price Charts: Comparative visualizations (e.g., gold price vs. inflation).
+
+Market News Aggregator: Auto-updated feed of latest news, research, and articles on gold and precious metals.
+
+Expert Commentary and Analysis: Supplement API feeds with your own gold market commentary.
+
+Automated Social Pushes: Post brief price/market snapshots to social media to drive traffic back.
+
+Combining these API sources with lively, consistently published original articles on gold will help you build both a utility-driven platform (data/tools) and a content-driven destination (analysis/opinion/news)—powerful for organic SEO and audience retention.
