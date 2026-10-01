@@ -20,12 +20,15 @@ Sentry.init({
   
   // Set the environment
   environment: process.env.NEXT_PUBLIC_VERCEL_ENV || process.env.NODE_ENV || 'development',
-  
+
+  // Moved out of browserTracingIntegration's options into top-level init
+  // options — this SDK version's BrowserTracingOptions no longer has it.
+  tracePropagationTargets: ['localhost', /^\//],
+
   // Enable automatic instrumentation
   integrations: [
     // Browser tracing for performance monitoring
     Sentry.browserTracingIntegration({
-      tracePropagationTargets: ['localhost', /^\//],
       idleTimeout: 2000, // Increase idle timeout for better transaction capturing
     }),
     

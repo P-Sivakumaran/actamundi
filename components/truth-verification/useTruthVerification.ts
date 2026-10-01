@@ -57,14 +57,14 @@ export function useTruthVerification() {
 
       // Listen for stake events
       contract.on('StakeDeposited', async (verifierAddress, amount) => {
-        if (verifierAddress === window.ethereum.selectedAddress) {
+        if (verifierAddress === window.ethereum?.selectedAddress) {
           const verifierData = await contract.getVerifier(verifierAddress);
           setVerifier(verifierData);
         }
       });
 
       contract.on('StakeWithdrawn', async (verifierAddress, amount) => {
-        if (verifierAddress === window.ethereum.selectedAddress) {
+        if (verifierAddress === window.ethereum?.selectedAddress) {
           const verifierData = await contract.getVerifier(verifierAddress);
           setVerifier(verifierData);
         }
@@ -73,6 +73,7 @@ export function useTruthVerification() {
   }, []);
 
   const getContract = async () => {
+    if (!window.ethereum) throw new Error('No wallet found');
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
     return new ethers.Contract(

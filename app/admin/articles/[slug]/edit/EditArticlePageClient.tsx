@@ -1,8 +1,7 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Article } from '@/models/Article'
 import RichTextEditor from '@/components/RichTextEditor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,113 +11,103 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import Image from 'next/image'
+import { useP2PArticles } from '@/hooks/use-p2p-articles'
+import { useWalletAddress } from '@/hooks/use-wallet-address'
+import { publishBlob, coverImageUrl } from '@/lib/p2p/articles'
+import type { P2PArticle, P2PArticleInput } from '@/models/P2PArticle'
 
-export default function EditArticlePage({ params }: { params: { slug: string } }) {
+export default function EditArticlePageClient({ params }: { params: { slug: string } }) {
   const router = useRouter()
   const { toast } = useToast()
-  const [article, setArticle] = useState<Partial<Article>>({})
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { address, connecting, connect } = useWalletAddress()
+  const { articles, loading, publishArticle } = useP2PArticles({ authorAddr: address ?? undefined })
+
+  const [original, setOriginal] = useState<P2PArticle | null>(null)
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [excerpt, setExcerpt] = useState('')
+  const [category, setCategory] = useState('')
+  const [status, setStatus] = useState<'draft' | 'published'>('draft')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchArticle()
-  }, [params.slug])
+    const found = articles.find((a) => a.slug === params.slug) ?? null
+    if (!found) return
+    setOriginal(found)
+    setTitle(found.title)
+    setContent(found.content)
+    setExcerpt(found.excerpt ?? '')
+    setCategory(found.category ?? '')
+    setStatus(found.status)
+    setImagePreview(coverImageUrl(found.coverImageCid) ?? null)
+  }, [articles, params.slug])
 
-  async function fetchArticle() {
-    try {
-      const response = await fetch(`/api/articles/${params.slug}`)
-      if (!response.ok) throw new Error('Failed to fetch article')
-      const data = await response.json()
-      setArticle(data)
-      if (data.coverImage) {
-        setImagePreview(data.coverImage)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch article',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-
     setImageFile(file)
     const reader = new FileReader()
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string)
-    }
+    reader.onloadend = () => setImagePreview(reader.result as string)
     reader.readAsDataURL(file)
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (!original) return
+
     setSaving(true)
     setError(null)
 
     try {
-      let coverImageUrl = article.coverImage
-
+      let coverImageCid = original.coverImageCid
       if (imageFile) {
-        const formData = new FormData()
-        formData.append('file', imageFile)
-        formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || '')
-
-        const uploadResponse = await fetch(
-          `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-          {
-            method: 'POST',
-            body: formData,
-          }
-        )
-
-        if (!uploadResponse.ok) throw new Error('Failed to upload image')
-        const uploadData = await uploadResponse.json()
-        coverImageUrl = uploadData.secure_url
+        const bytes = new Uint8Array(await imageFile.arrayBuffer())
+        coverImageCid = await publishBlob(bytes)
       }
 
-      const response = await fetch(`/api/articles/${params.slug}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...article,
-          coverImage: coverImageUrl,
-        }),
-      })
+      const wordCount = content.trim().split(/\s+/).filter(Boolean).length
+      const input: P2PArticleInput = {
+        slug: original.slug,
+        title,
+        content,
+        excerpt: excerpt || undefined,
+        coverImageCid,
+        category: category || undefined,
+        status,
+        createdAt: original.createdAt,
+        publishedAt: status === 'published' ? (original.publishedAt ?? new Date().toISOString()) : undefined,
+        readingTime: Math.max(1, Math.round(wordCount / 200)),
+        prevCid: original.cid,
+      }
 
-      if (!response.ok) throw new Error('Failed to update article')
-      
-      toast({
-        title: 'Success',
-        description: 'Article updated successfully',
-      })
-      
+      await publishArticle(input)
+
+      toast({ title: 'Success', description: 'Article updated successfully' })
       router.push('/admin/articles')
-      router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-      toast({
-        title: 'Error',
-        description: 'Failed to update article',
-        variant: 'destructive',
-      })
+      const message = err instanceof Error ? err.message : 'Failed to update article'
+      setError(message)
+      toast({ title: 'Error', description: message, variant: 'destructive' })
     } finally {
       setSaving(false)
     }
   }
 
-  if (loading) {
+  if (!address) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <p className="text-muted-foreground">Connect your wallet to edit articles.</p>
+        <Button onClick={() => connect()} disabled={connecting}>
+          {connecting ? 'Connecting...' : 'Connect Wallet'}
+        </Button>
+      </div>
+    )
+  }
+
+  if (loading || !original) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -149,22 +138,12 @@ export default function EditArticlePage({ params }: { params: { slug: string } }
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={article.title || ''}
-                onChange={(e) => setArticle({ ...article, title: e.target.value })}
-                required
-              />
+              <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="excerpt">Excerpt</Label>
-              <Textarea
-                id="excerpt"
-                value={article.excerpt || ''}
-                onChange={(e) => setArticle({ ...article, excerpt: e.target.value })}
-                required
-              />
+              <Textarea id="excerpt" value={excerpt} onChange={(e) => setExcerpt(e.target.value)} />
             </div>
 
             <div className="space-y-2">
@@ -172,12 +151,7 @@ export default function EditArticlePage({ params }: { params: { slug: string } }
               <div className="flex items-center space-x-4">
                 {imagePreview && (
                   <div className="relative w-32 h-32">
-                    <Image
-                      src={imagePreview}
-                      alt="Cover preview"
-                      fill
-                      className="object-cover rounded-md"
-                    />
+                    <Image src={imagePreview} alt="Cover preview" fill className="object-cover rounded-md" />
                   </div>
                 )}
                 <Input
@@ -193,34 +167,25 @@ export default function EditArticlePage({ params }: { params: { slug: string } }
             <div className="space-y-2">
               <Label htmlFor="content">Content</Label>
               <RichTextEditor
-                content={article.content || ''}
-                onChange={(content) => setArticle({ ...article, content })}
+                content={content}
+                onChange={setContent}
                 placeholder="Write your article content here..."
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
-              <Input
-                id="category"
-                value={article.category || ''}
-                onChange={(e) => setArticle({ ...article, category: e.target.value })}
-                required
-              />
+              <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select
-                value={article.status || 'draft'}
-                onValueChange={(value) => setArticle({ ...article, status: value as Article['status'] })}
-              >
+              <Select value={status} onValueChange={(v) => setStatus(v as 'draft' | 'published')}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="review">Review</SelectItem>
                   <SelectItem value="published">Published</SelectItem>
                 </SelectContent>
               </Select>
@@ -236,4 +201,4 @@ export default function EditArticlePage({ params }: { params: { slug: string } }
       </Card>
     </div>
   )
-} 
+}

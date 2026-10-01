@@ -3,13 +3,14 @@
 import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Article } from '@/models/Article'
+import type { P2PArticle } from '@/models/P2PArticle'
+import { coverImageUrl } from '@/lib/p2p/articles'
 import { cn } from '@/lib/utils'
-import { CalendarIcon, Clock, TagIcon, ArrowRightIcon, EyeIcon } from 'lucide-react'
+import { CalendarIcon, Clock, TagIcon, ArrowRightIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
 interface ArticleCardProps {
-  article: Article
+  article: P2PArticle
   className?: string
   priority?: boolean
 }
@@ -20,16 +21,17 @@ export function ArticleCard({ article, className, priority = false }: ArticleCar
     day: 'numeric',
     year: 'numeric'
   })
+  const coverImage = coverImageUrl(article.coverImageCid)
 
   return (
-    <div 
+    <div
       className={cn(
-        "cq-card-container group animate-fade-in", 
+        "cq-card-container group animate-fade-in",
         className
       )}
     >
-      <Link 
-        href={`/articles/${article.slug}`}
+      <Link
+        href={`/articles/${article.cid}`}
         aria-label={`Read article: ${article.title}`}
         className={cn(
           "block h-full overflow-hidden bg-card hover:bg-card/95 dark:hover:bg-card/90 text-card-foreground",
@@ -39,29 +41,22 @@ export function ArticleCard({ article, className, priority = false }: ArticleCar
           "cq-card-horizontal"
         )}
       >
-        {article.coverImage && (
+        {coverImage && (
           <div className="relative w-full h-52 @md:h-full @md:w-2/5 overflow-hidden">
             <Image
-              src={article.coverImage}
+              src={coverImage}
               alt={article.title}
               fill
               priority={priority}
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="object-cover transition-transform duration-700 group-hover:scale-105"
             />
-            {article.featured && (
-              <div className="absolute top-2 left-2 z-10">
-                <Badge variant="secondary" className="bg-secondary/80 backdrop-blur-sm">
-                  Featured
-                </Badge>
-              </div>
-            )}
           </div>
         )}
         
         <div className={cn(
           "p-5 @md:p-6 @lg:p-8 flex flex-col h-full",
-          article.coverImage ? "@md:w-3/5" : "w-full"
+          coverImage ? "@md:w-3/5" : "w-full"
         )}>
           <div className="flex items-center text-xs text-muted-foreground mb-3 gap-4">
             <div className="flex items-center gap-1.5">
@@ -112,12 +107,6 @@ export function ArticleCard({ article, className, priority = false }: ArticleCar
             </span>
             
             <div className="flex items-center gap-3">
-              {article.views && (
-                <span className="flex items-center text-xs text-muted-foreground gap-1">
-                  <EyeIcon className="h-3.5 w-3.5" /> {article.views}
-                </span>
-              )}
-              
               <span className={cn(
                 "text-xs px-2 py-1 rounded-full font-medium",
                 article.status === 'published' 

@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { Button } from '@/components/ui/button';
@@ -73,6 +75,7 @@ export function TruthVerification() {
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.ethereum) {
+      if (!window.ethereum) throw new Error('No wallet found');
       const provider = new ethers.BrowserProvider(window.ethereum);
       const contract = new ethers.Contract(
         TRUTH_VERIFICATION_ADDRESS!,
@@ -114,14 +117,14 @@ export function TruthVerification() {
 
       // Listen for stake events
       contract.on('StakeDeposited', async (verifierAddress, amount) => {
-        if (verifierAddress === window.ethereum.selectedAddress) {
+        if (verifierAddress === window.ethereum?.selectedAddress) {
           const verifierData = await contract.getVerifier(verifierAddress);
           setVerifier(verifierData);
         }
       });
 
       contract.on('StakeWithdrawn', async (verifierAddress, amount) => {
-        if (verifierAddress === window.ethereum.selectedAddress) {
+        if (verifierAddress === window.ethereum?.selectedAddress) {
           const verifierData = await contract.getVerifier(verifierAddress);
           setVerifier(verifierData);
         }
@@ -141,6 +144,7 @@ export function TruthVerification() {
 
     setIsLoading(true);
     try {
+      if (!window.ethereum) throw new Error('No wallet found');
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(
@@ -174,6 +178,7 @@ export function TruthVerification() {
   const handleVerifyClaim = async (claimId: string) => {
     setIsLoading(true);
     try {
+      if (!window.ethereum) throw new Error('No wallet found');
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(
@@ -204,6 +209,7 @@ export function TruthVerification() {
   const handleDisputeClaim = async (claimId: string) => {
     setIsLoading(true);
     try {
+      if (!window.ethereum) throw new Error('No wallet found');
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(
@@ -243,6 +249,7 @@ export function TruthVerification() {
 
     setIsLoading(true);
     try {
+      if (!window.ethereum) throw new Error('No wallet found');
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(
@@ -277,6 +284,7 @@ export function TruthVerification() {
   const handleWithdrawStake = async (amount: string) => {
     setIsLoading(true);
     try {
+      if (!window.ethereum) throw new Error('No wallet found');
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(

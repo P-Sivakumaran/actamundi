@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Report the error to Sentry
-    Sentry.captureException(error, { extra: errorInfo });
+    Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
     
     // Call the optional onError callback
     if (this.props.onError) {

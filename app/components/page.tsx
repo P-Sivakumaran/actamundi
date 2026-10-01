@@ -170,7 +170,7 @@ export default function ComponentsDemo() {
                 <h3 className="text-lg font-medium">Checkboxes</h3>
                 <div className="space-y-3">
                   <div className="flex items-center space-x-2">
-                    <Checkbox id="terms" checked={checkboxValue} onCheckedChange={setCheckboxValue} />
+                    <Checkbox id="terms" checked={checkboxValue} onCheckedChange={(checked) => setCheckboxValue(checked === true)} />
                     <Label htmlFor="terms">Accept terms and conditions</Label>
                   </div>
                   <div className="flex items-center space-x-2">

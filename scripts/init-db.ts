@@ -1,10 +1,9 @@
 import { hash } from 'bcryptjs'
-import clientPromise from '@/lib/mongodb'
+import { connectToDatabase } from '@/lib/mongodb'
 
 async function initDb() {
   try {
-    const client = await clientPromise
-    const db = client.db('actamundi')
+    const { db } = await connectToDatabase()
 
     // Create default admin user
     const adminPassword = await hash('admin123', 12)

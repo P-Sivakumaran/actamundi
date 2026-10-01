@@ -62,29 +62,4 @@ export function setContext(name: string, data: Record<string, any>) {
   Sentry.setContext(name, data);
 }
 
-/**
- * Start a new transaction for performance monitoring
- * 
- * @param name - The name of the transaction
- * @param operation - The operation being performed
- */
-export function startTransaction(name: string, operation: string) {
-  return Sentry.startTransaction({
-    name,
-    op: operation,
-  });
-}
-
-/**
- * Create a performance span within a transaction
- * 
- * @param transaction - The parent transaction
- * @param operation - The operation being performed
- * @param description - A description of the span
- */
-export function createSpan(transaction: Sentry.Transaction, operation: string, description: string) {
-  return transaction.startChild({
-    op: operation,
-    description,
-  });
-} 
+ 

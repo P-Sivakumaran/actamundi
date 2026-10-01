@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { useCallback, useTransition, useMemo } from 'react'
 import { useDebounce } from '@/hooks/use-debounce'
-import { Combobox, ComboboxOption } from '@/components/ui/combobox'
+import { Combobox } from '@/components/ui/combobox'
 
 interface ArticleSearchProps {
   categories: string[]
@@ -16,7 +16,7 @@ export default function ArticleSearch({ categories }: ArticleSearchProps) {
   const [isPending, startTransition] = useTransition()
 
   // Convert categories array to the format expected by Combobox
-  const categoryOptions = useMemo<ComboboxOption[]>(() => [
+  const categoryOptions = useMemo(() => [
     { value: '', label: 'All Categories' },
     ...categories.map(category => ({ 
       value: category, 
@@ -65,7 +65,7 @@ export default function ArticleSearch({ categories }: ArticleSearchProps) {
         <Combobox
           options={categoryOptions}
           value={searchParams.get('category') ?? ''}
-          onValueChange={handleCategoryChange}
+          onChange={handleCategoryChange}
           placeholder="Select category"
           emptyMessage="No categories found."
         />

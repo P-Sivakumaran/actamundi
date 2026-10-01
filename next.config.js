@@ -16,6 +16,12 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'ipfs.io',
+        port: '',
+        pathname: '/ipfs/**',
+      },
     ],
   },
   // The `sentry` key was removed from here as it's not a standard Next.js config option.
