@@ -6,6 +6,20 @@ import ArticleSearch from '@/components/ArticleSearch'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArticleCard } from '@/components/ArticleCard'
 import { useP2PArticles } from '@/hooks/use-p2p-articles'
+import { PrototypeSwitcher } from '@/components/prototype/PrototypeSwitcher'
+import { VariantA } from '@/components/prototype/article-feed/VariantA'
+import { VariantB } from '@/components/prototype/article-feed/VariantB'
+import { VariantC } from '@/components/prototype/article-feed/VariantC'
+
+// PROTOTYPE — feed-native direction, see strategy doc recommendations.
+// ?variant=A|B|C on this route swaps in mock-data layouts; drop this block
+// once a direction is picked (prototype skill: capture to a throwaway
+// branch, fold the winner into the real markup below).
+const FEED_VARIANTS = [
+  { key: 'A', name: 'Dense scannable list' },
+  { key: 'B', name: 'Full-bleed snap feed' },
+  { key: 'C', name: 'Trust-first grid' },
+]
 
 /**
  * Live feed, not a historical archive: with no server to page through,
@@ -21,6 +35,19 @@ export default function ArticlesPageClient() {
 
   const { loading, error, categories, filterArticles } = useP2PArticles({ category })
   const articles = filterArticles({ status: 'published', category, search: q })
+
+  const variant = searchParams.get('variant')
+  if (process.env.NODE_ENV !== 'production' && variant) {
+    return (
+      <div className="pb-24">
+        <h1 className="mb-6 text-2xl font-bold">Articles — feed prototype</h1>
+        {variant === 'B' && <VariantB />}
+        {variant === 'C' && <VariantC />}
+        {variant !== 'B' && variant !== 'C' && <VariantA />}
+        <PrototypeSwitcher variants={FEED_VARIANTS} current={variant === 'B' || variant === 'C' ? variant : 'A'} />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8">
