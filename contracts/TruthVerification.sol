@@ -1,15 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-contract TruthVerification is Ownable, ReentrancyGuard, Pausable {
-    using Counters for Counters.Counter;
+/// @notice Board-governed in place of single-owner control: `governor` is a
+/// TimelockController (see deployment), not an EOA. Board members hold
+/// PROPOSER_ROLE/CANCELLER_ROLE on that timelock — admin actions here go
+/// through its schedule -> minDelay (the appeal window, during which any
+/// board member can cancel) -> execute flow rather than taking effect
+/// instantly from a single address. See docs for the Phase 1 rationale.
+contract TruthVerification is ReentrancyGuard, Pausable {
     using Strings for uint256;
+
+    /// @notice The only address authorized to call governor-gated functions —
+    /// set once at deployment to a TimelockController address. Immutable: a
+    /// governor swap (e.g. retiring the timelock for a new one) is itself a
+    /// board-governed action performed by deploying a new TruthVerification
+    /// instance, not a backdoor on this one.
+    address public immutable governor;
+
+    modifier onlyGovernor() {
+        require(msg.sender == governor, "Not the governor");
+        _;
+    }
 
     struct Claim {
         string content;
@@ -82,8 +97,8 @@ contract TruthVerification is Ownable, ReentrancyGuard, Pausable {
     mapping(address => uint256) public stakeAmount;
     mapping(string => uint256) public categoryThresholds;
     
-    Counters.Counter private _claimCounter;
-    Counters.Counter private _evidenceCounter;
+    uint256 private _claimCounter;
+    uint256 private _evidenceCounter;
     
     uint256 public constant VERIFICATION_COOLDOWN = 1 hours;
     uint256 public constant DISPUTE_COOLDOWN = 2 hours;
@@ -115,7 +130,9 @@ contract TruthVerification is Ownable, ReentrancyGuard, Pausable {
     event SourceBlacklisted(string indexed source);
     event CategoryThresholdUpdated(string indexed category, uint256 threshold);
     
-    constructor() Ownable(msg.sender) {
+    constructor(address _governor) {
+        require(_governor != address(0), "Governor required");
+        governor = _governor;
         _pause(); // Start paused for initial setup
         // Initialize default category thresholds
         categoryThresholds["factual"] = 80;
@@ -128,8 +145,8 @@ contract TruthVerification is Ownable, ReentrancyGuard, Pausable {
         require(bytes(_source).length > 0, "Source cannot be empty");
         require(sources[_source].isWhitelisted || sources[_source].reliability >= SOURCE_RELIABILITY_THRESHOLD, "Source not trusted");
         
-        _claimCounter.increment();
-        bytes32 claimId = keccak256(abi.encodePacked(_content, msg.sender, block.timestamp, _claimCounter.current()));
+        _claimCounter++;
+        bytes32 claimId = keccak256(abi.encodePacked(_content, msg.sender, block.timestamp, _claimCounter));
         
         Claim storage newClaim = claims[claimId];
         newClaim.content = _content;
@@ -152,8 +169,8 @@ contract TruthVerification is Ownable, ReentrancyGuard, Pausable {
         require(bytes(_content).length > 0, "Content cannot be empty");
         require(bytes(_source).length > 0, "Source cannot be empty");
         
-        _evidenceCounter.increment();
-        bytes32 evidenceId = keccak256(abi.encodePacked(_content, msg.sender, block.timestamp, _evidenceCounter.current()));
+        _evidenceCounter++;
+        bytes32 evidenceId = keccak256(abi.encodePacked(_content, msg.sender, block.timestamp, _evidenceCounter));
         
         Evidence storage newEvidence = evidence[evidenceId];
         newEvidence.content = _content;
@@ -307,7 +324,7 @@ contract TruthVerification is Ownable, ReentrancyGuard, Pausable {
         emit StakeWithdrawn(msg.sender, amount);
     }
     
-    function registerVerifier(address _verifier, string[] memory _expertiseAreas) external onlyOwner {
+    function registerVerifier(address _verifier, string[] memory _expertiseAreas) external onlyGovernor {
         require(!verifiers[_verifier].isActive, "Already registered");
         
         Verifier storage verifier = verifiers[_verifier];
@@ -321,34 +338,34 @@ contract TruthVerification is Ownable, ReentrancyGuard, Pausable {
         emit VerifierRegistered(_verifier);
     }
     
-    function deactivateVerifier(address _verifier) external onlyOwner {
+    function deactivateVerifier(address _verifier) external onlyGovernor {
         require(verifiers[_verifier].isActive, "Not registered");
         
         verifiers[_verifier].isActive = false;
         emit VerifierDeactivated(_verifier);
     }
     
-    function whitelistSource(string memory _source) external onlyOwner {
+    function whitelistSource(string memory _source) external onlyGovernor {
         sources[_source].isWhitelisted = true;
         sources[_source].reliability = 100;
         sources[_source].lastUpdate = block.timestamp;
         emit SourceWhitelisted(_source);
     }
     
-    function blacklistSource(string memory _source) external onlyOwner {
+    function blacklistSource(string memory _source) external onlyGovernor {
         sources[_source].isWhitelisted = false;
         sources[_source].reliability = 0;
         sources[_source].lastUpdate = block.timestamp;
         emit SourceBlacklisted(_source);
     }
     
-    function updateSourceReliability(string memory _source, uint256 _reliability) external onlyOwner {
+    function updateSourceReliability(string memory _source, uint256 _reliability) external onlyGovernor {
         require(_reliability <= 100, "Invalid reliability value");
         sources[_source].reliability = _reliability;
         sources[_source].lastUpdate = block.timestamp;
     }
     
-    function updateCategoryThreshold(string memory _category, uint256 _threshold) external onlyOwner {
+    function updateCategoryThreshold(string memory _category, uint256 _threshold) external onlyGovernor {
         require(_threshold <= 100, "Invalid threshold value");
         categoryThresholds[_category] = _threshold;
         emit CategoryThresholdUpdated(_category, _threshold);
@@ -466,11 +483,11 @@ contract TruthVerification is Ownable, ReentrancyGuard, Pausable {
         );
     }
     
-    function pause() external onlyOwner {
+    function pause() external onlyGovernor {
         _pause();
     }
     
-    function unpause() external onlyOwner {
+    function unpause() external onlyGovernor {
         _unpause();
     }
 } 

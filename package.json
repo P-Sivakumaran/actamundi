@@ -23,6 +23,9 @@
     "seed": "ts-node scripts/seed-articles.ts",
     "p2p:relay": "node scripts/p2p-relay.mjs",
     "test": "jest",
+    "contracts:compile": "cd contracts && hardhat compile",
+    "contracts:test": "cd contracts && hardhat test",
+    "test:moderation": "node --import tsx --test lib/p2p/__tests__/moderation.test.ts",
     "prepare": "husky install"
   },
   "dependencies": {
@@ -101,14 +104,25 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.2.0",
+    "@nomicfoundation/hardhat-ignition": "^3.1.8",
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^4.0.0",
+    "@openzeppelin/contracts": "^5.6.1",
     "@tailwindcss/container-queries": "^0.1.1",
     "@types/bcryptjs": "^2.4.6",
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
     "@types/node": "^20.11.19",
     "@types/react": "^18.2.57",
     "@types/react-dom": "^18.2.19",
+    "chai": "^6.3.0",
     "eslint": "^8.56.0",
     "eslint-config-next": "14.1.0",
+    "hardhat": "^3.18.0",
+    "mocha": "^12.0.3",
+    "solc": "0.8.34",
     "ts-node": "^10.9.2",
+    "tsx": "^4.23.15",
     "typescript": "^5.3.3"
   }
 }

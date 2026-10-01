@@ -12,6 +12,7 @@ import * as dagCbor from '@ipld/dag-cbor'
 import { sha256 } from 'multiformats/hashes/sha2'
 import { base58btc } from 'multiformats/bases/base58'
 import { verifyArticleSignatureFor } from './signing'
+import { normalizeBoardPolicy, verifyModerationAction, type BoardPolicy } from './moderation-policy'
 
 const type = 'actamundi-author'
 
@@ -43,3 +44,23 @@ export const AuthorAccessController =
   }
 
 AuthorAccessController.type = type
+
+const boardType = 'actamundi-board-v1'
+
+/** Fixed policy in the manifest: changing membership creates a new log. */
+export const BoardAccessController = (policy: BoardPolicy) => {
+  const board = normalizeBoardPolicy(policy)
+  return async () => {
+    const { cid } = await Block.encode({
+      value: { type: boardType, ...board }, codec: dagCbor, hasher: sha256,
+    })
+    return {
+      type: boardType,
+      address: `/${boardType}/${cid.toString(base58btc)}`,
+      canAppend: async (entry: { payload?: { op?: string; value?: unknown } }): Promise<boolean> =>
+        entry.payload?.op === 'ADD' && verifyModerationAction(entry.payload.value, board),
+    }
+  }
+}
+
+BoardAccessController.type = boardType
