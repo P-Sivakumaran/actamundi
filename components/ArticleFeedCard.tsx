@@ -2,26 +2,9 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Clock } from 'lucide-react'
 import { ModerationBadge } from '@/components/ModerationBadge'
+import { truncateAddress, fallbackGradient } from '@/lib/utils'
 import type { P2PArticle } from '@/models/P2PArticle'
 import type { ModerationAction } from '@/lib/p2p/moderation'
-
-const FALLBACK_GRADIENTS = [
-  'from-violet-900 to-indigo-950',
-  'from-rose-900 to-red-950',
-  'from-emerald-900 to-teal-950',
-  'from-amber-900 to-orange-950',
-  'from-sky-900 to-blue-950',
-]
-
-function fallbackGradient(cid: string): string {
-  let hash = 0
-  for (let i = 0; i < cid.length; i++) hash = (hash * 31 + cid.charCodeAt(i)) >>> 0
-  return FALLBACK_GRADIENTS[hash % FALLBACK_GRADIENTS.length]
-}
-
-function truncateAddr(addr: string): string {
-  return addr.length > 10 ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : addr
-}
 
 export function ArticleFeedCard({
   article,
@@ -71,7 +54,7 @@ export function ArticleFeedCard({
           <p className="mt-2 text-sm text-white/80 line-clamp-2">{article.excerpt}</p>
         )}
         <div className="mt-3 flex items-center gap-3 text-xs text-white/70">
-          <span>{truncateAddr(article.authorAddr)}</span>
+          <span>{truncateAddress(article.authorAddr)}</span>
           {article.readingTime > 0 && (
             <span className="inline-flex items-center gap-0.5">
               <Clock className="h-3 w-3" />
