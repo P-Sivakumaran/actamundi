@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { ethers } from 'ethers'
 import type { P2PArticle, P2PArticleInput } from '@/models/P2PArticle'
-import { subscribeToModeration } from '@/lib/p2p/moderation'
+import { subscribeToModeration, type ModerationAction } from '@/lib/p2p/moderation'
 import {
   fetchArticleByCid,
   fetchAuthorArticles,
@@ -37,7 +37,7 @@ export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions =
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const bySlug = useRef<Map<string, P2PArticle>>(new Map())
-  const [delisted, setDelisted] = useState<Set<string>>(new Set())
+  const [moderationStatus, setModerationStatus] = useState<Map<string, ModerationAction>>(new Map())
   const [moderationReady, setModerationReady] = useState(false)
   const [moderationError, setModerationError] = useState<string | null>(null)
 
@@ -51,7 +51,7 @@ export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions =
     }
     subscribeToModeration((next) => {
       if (cancelled) return
-      setDelisted(next)
+      setModerationStatus(next)
       setModerationReady(true)
       setModerationError(null)
     }, failed).then((cleanup) => {
@@ -61,9 +61,14 @@ export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions =
     return () => { cancelled = true; unsubscribe?.() }
   }, [])
 
+  const isDelisted = useCallback(
+    (cid: string) => moderationStatus.get(cid)?.action === 'delist',
+    [moderationStatus]
+  )
+
   // Hide the served index until its local moderation snapshot is checked.
   // Keep the underlying article map so a later endorsement restores visibility.
-  const visibleArticles = moderationReady ? articles.filter((a) => !delisted.has(a.cid)) : []
+  const visibleArticles = moderationReady ? articles.filter((a) => !isDelisted(a.cid)) : []
 
   const applyArticle = useCallback((article: P2PArticle) => {
     const existing = bySlug.current.get(article.slug)
@@ -154,7 +159,7 @@ export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions =
   const filterArticles = useCallback(
     (filters: ArticleFilters): P2PArticle[] => {
       return articles.filter((a) => {
-        if (!moderationReady || delisted.has(a.cid)) return false
+        if (!moderationReady || isDelisted(a.cid)) return false
         if (a.tombstone) return false
         if (filters.status && a.status !== filters.status) return false
         if (filters.category && a.category !== filters.category) return false
@@ -164,7 +169,7 @@ export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions =
         return true
       })
     },
-    [articles, moderationReady, delisted]
+    [articles, moderationReady, isDelisted]
   )
 
   const categories = Array.from(
@@ -176,5 +181,7 @@ export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions =
     loading: loading || (!moderationReady && !moderationError),
     error: moderationError ?? error,
     categories, publishArticle, deleteArticle, filterArticles,
+    /** Latest board action per article CID (endorse/flag/delist). No entry = unreviewed. */
+    moderationStatus,
   }
 }

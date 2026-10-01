@@ -84,13 +84,20 @@ export function compareModerationActions(a: ModerationAction, b: ModerationActio
   return left < right ? -1 : left > right ? 1 : 0
 }
 
-/** Reverify at the read boundary as well as in the access controller. */
-export function activeDelistedCids(values: unknown[], policy: BoardPolicy): Set<string> {
+/** Reverify at the read boundary as well as in the access controller.
+ * Latest verified action per CID — the shared basis for both the delisted
+ * set (feed filtering) and a feed-wide trust badge (no entry = unreviewed). */
+export function activeModerationByCid(values: unknown[], policy: BoardPolicy): Map<string, ModerationAction> {
   const latest = new Map<string, ModerationAction>()
   for (const value of values) {
     if (!verifyModerationAction(value, policy)) continue
     const previous = latest.get(value.cid)
     if (!previous || compareModerationActions(previous, value) < 0) latest.set(value.cid, value)
   }
+  return latest
+}
+
+export function activeDelistedCids(values: unknown[], policy: BoardPolicy): Set<string> {
+  const latest = activeModerationByCid(values, policy)
   return new Set(Array.from(latest.values()).filter((a) => a.action === 'delist').map((a) => a.cid))
 }

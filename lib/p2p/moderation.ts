@@ -1,7 +1,7 @@
 import { BoardAccessController } from './access-controller'
 import {
   normalizeBoardPolicy, moderationSignableBody, verifyModerationAction,
-  activeDelistedCids, compareModerationActions, MODERATION_DOMAIN,
+  activeModerationByCid, compareModerationActions, MODERATION_DOMAIN,
   type BoardPolicy, type ModerationAction, type ModerationInput,
 } from './moderation-policy'
 
@@ -75,9 +75,11 @@ export function createModerationClient(policy: BoardPolicy, openStore: () => Pro
   }
 
   /** Observe initial state plus local/replicated writes. Serialize refreshes so
-   * an older asynchronous snapshot cannot overwrite a newer moderation state. */
+   * an older asynchronous snapshot cannot overwrite a newer moderation state.
+   * Emits the full latest-action-per-CID map (not just delisted) so callers
+   * can show a status badge (endorsed/flagged/unreviewed), not just filter. */
   async function subscribeToModeration(
-    onChange: (delisted: Set<string>) => void,
+    onChange: (status: Map<string, ModerationAction>) => void,
     onError: (error: unknown) => void
   ): Promise<() => void> {
     const policy = board
@@ -88,8 +90,8 @@ export function createModerationClient(policy: BoardPolicy, openStore: () => Pro
       pending = pending.then(async () => {
         if (stopped) return
         const entries = await db.all()
-        const delisted = activeDelistedCids(entries.map((entry) => entry.value), policy)
-        if (!stopped) onChange(delisted)
+        const status = activeModerationByCid(entries.map((entry) => entry.value), policy)
+        if (!stopped) onChange(status)
       }).catch((error) => { if (!stopped) onError(error) })
     }
     db.events.on('update', refresh)
@@ -113,7 +115,7 @@ export async function fetchModerationLog(cid: string): Promise<ModerationAction[
 }
 
 export async function subscribeToModeration(
-  onChange: (delisted: Set<string>) => void,
+  onChange: (status: Map<string, ModerationAction>) => void,
   onError: (error: unknown) => void
 ): Promise<() => void> {
   return configuredClient().subscribeToModeration(onChange, onError)

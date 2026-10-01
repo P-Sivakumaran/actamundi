@@ -181,22 +181,31 @@ test('subscriptions load initial state, refresh on replicated updates, recover e
   const { client, store, failReads } = await memoryLog()
   const delist = await signed()
   await store.add(delist)
-  const states: Set<string>[] = []
+  const states: Map<string, ModerationAction>[] = []
   const errors: unknown[] = []
   const unsubscribe = await client.subscribeToModeration((state) => states.push(state), (error) => errors.push(error))
   await settle()
-  assert.deepEqual(states, [new Set([delist.cid])])
-  await store.add(await signed({ action: 'endorse', timestamp: '2026-10-02T00:00:00.000Z' }))
+  assert.deepEqual(states, [new Map([[delist.cid, delist]])])
+
+  // Later 'endorse' overtakes the delist for the same cid — the map keeps
+  // the cid (so a badge can show "endorsed"), it's activeDelistedCids that
+  // would now return empty, not this bulk map.
+  const endorse = await signed({ action: 'endorse', timestamp: '2026-10-02T00:00:00.000Z' })
+  await store.add(endorse)
   await settle()
-  assert.deepEqual(states[states.length - 1], new Set())
+  assert.deepEqual(states[states.length - 1], new Map([[delist.cid, endorse]]))
+
   failReads(true)
   store.events.emit('update')
   await settle()
   assert.equal(errors.length, 1)
   failReads(false)
-  await store.add(await signed({ timestamp: '2026-10-03T00:00:00.000Z' }))
+
+  const relist = await signed({ timestamp: '2026-10-03T00:00:00.000Z' })
+  await store.add(relist)
   await settle()
-  assert.deepEqual(states[states.length - 1], new Set([delist.cid]))
+  assert.deepEqual(states[states.length - 1], new Map([[delist.cid, relist]]))
+
   const count = states.length
   store.events.emit('update')
   unsubscribe()
