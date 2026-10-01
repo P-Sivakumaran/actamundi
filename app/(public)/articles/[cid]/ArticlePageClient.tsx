@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { CheckCircle2, Clock, History, ShieldQuestion } from 'lucide-react'
+import { CheckCircle2, Clock, History, ShieldQuestion, AlertCircle } from 'lucide-react'
 import { fetchArticleByCid, coverImageUrl } from '@/lib/p2p/articles'
-import { fetchModerationLog, type ModerationAction } from '@/lib/p2p/moderation'
+import { fetchModerationLog, subscribeToModeration, type ModerationAction } from '@/lib/p2p/moderation'
 import { ModerationBadge } from '@/components/ModerationBadge'
 import { truncateAddress, fallbackGradient } from '@/lib/utils'
 import type { P2PArticle } from '@/models/P2PArticle'
@@ -24,12 +24,14 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
   const [error, setError] = useState(false)
   const [history, setHistory] = useState<P2PArticle[]>([])
   const [moderationLog, setModerationLog] = useState<ModerationAction[]>([])
+  const [latestModeration, setLatestModeration] = useState<ModerationAction | undefined>(undefined)
+  const [moderationState, setModerationState] = useState<'loading' | 'unavailable' | 'ready'>('loading')
 
+  // Article + its signed version chain.
   useEffect(() => {
     let cancelled = false
     setArticle(null)
     setHistory([])
-    setModerationLog([])
 
     fetchArticleByCid(params.cid)
       .then(async (a) => {
@@ -37,24 +39,28 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
         setArticle(a)
 
         // Walk the prevCid chain for a visible correction/version history.
-        // Capped and best-effort: an older version a peer never replicated
-        // just stops the chain early rather than failing the page.
+        // prevCid is just a self-declared pointer, not cryptographically
+        // bound to the article that names it — without checking lineage,
+        // any author could point prevCid at someone else's unrelated
+        // article to borrow (or smear) its reputation by association.
+        // Capped and best-effort: an older version a peer never
+        // replicated just stops the chain early rather than failing the page.
         const chain: P2PArticle[] = []
         let cursor = a.prevCid
-        for (let i = 0; i < 25 && cursor; i++) {
+        let lineage = a
+        for (let i = 0; i < 25 && cursor && !cancelled; i++) {
+          let prev: P2PArticle
           try {
-            const prev = await fetchArticleByCid(cursor)
-            chain.push(prev)
-            cursor = prev.prevCid
+            prev = await fetchArticleByCid(cursor)
           } catch {
             break
           }
+          if (prev.slug !== lineage.slug || prev.authorAddr !== lineage.authorAddr) break
+          chain.push(prev)
+          lineage = prev
+          cursor = prev.prevCid
         }
         if (!cancelled) setHistory(chain)
-
-        fetchModerationLog(a.cid)
-          .then((log) => { if (!cancelled) setModerationLog(log) })
-          .catch(() => { if (!cancelled) setModerationLog([]) })
       })
       .catch(() => {
         if (!cancelled) setError(true)
@@ -64,6 +70,40 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
       cancelled = true
     }
   }, [params.cid])
+
+  // Moderation: subscribed, not one-shot — a flag/endorse/delist that
+  // replicates in after first paint has to actually update the badge and
+  // log, not freeze on whatever was locally known at mount.
+  useEffect(() => {
+    if (!article) return
+    let cancelled = false
+    setModerationState('loading')
+
+    const refreshLog = () => {
+      fetchModerationLog(article.cid)
+        .then((log) => {
+          if (cancelled) return
+          setModerationLog(log)
+          setModerationState('ready')
+        })
+        .catch(() => { if (!cancelled) setModerationState('unavailable') })
+    }
+
+    let unsubscribe: (() => void) | undefined
+    subscribeToModeration(
+      (statusMap) => {
+        if (cancelled) return
+        setLatestModeration(statusMap.get(article.cid))
+        refreshLog()
+      },
+      () => { if (!cancelled) setModerationState('unavailable') }
+    ).then((cleanup) => {
+      if (cancelled) cleanup()
+      else unsubscribe = cleanup
+    }).catch(() => { if (!cancelled) setModerationState('unavailable') })
+
+    return () => { cancelled = true; unsubscribe?.() }
+  }, [article?.cid])
 
   if (error) notFound()
 
@@ -76,7 +116,6 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
   }
 
   const cover = coverImageUrl(article.coverImageCid)
-  const latestModeration = moderationLog[moderationLog.length - 1]
 
   return (
     <article className="mx-auto max-w-3xl">
@@ -92,7 +131,9 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
             {article.category}
           </span>
         )}
-        <ModerationBadge action={latestModeration} className="absolute right-4 top-4" />
+        {moderationState === 'ready' && (
+          <ModerationBadge action={latestModeration} className="absolute right-4 top-4" />
+        )}
       </div>
 
       <header className="mb-6">
@@ -116,7 +157,18 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
           Signature verified
         </span>
         <span className="text-muted-foreground">·</span>
-        <ModerationBadge action={latestModeration} className="!bg-transparent !px-0 !text-foreground" />
+        {moderationState === 'loading' && (
+          <span className="text-muted-foreground">Checking moderation status…</span>
+        )}
+        {moderationState === 'unavailable' && (
+          <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400">
+            <AlertCircle className="h-3.5 w-3.5" />
+            Moderation status unavailable
+          </span>
+        )}
+        {moderationState === 'ready' && (
+          <ModerationBadge action={latestModeration} className="!bg-transparent !px-0 !text-foreground" />
+        )}
         {history.length > 0 && (
           <>
             <span className="text-muted-foreground">·</span>
@@ -139,6 +191,9 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
             <History className="h-4 w-4" />
             Version history
           </h2>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Same slug and author wallet as this article, confirmed by signature — not independently fact-checked.
+          </p>
           <ol className="space-y-2">
             {history.map((version, i) => (
               <li key={version.cid} className="flex items-center justify-between gap-4 text-sm">
@@ -159,21 +214,31 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
           <ShieldQuestion className="h-4 w-4" />
           Moderation log
         </h2>
-        {moderationLog.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No moderation actions on this article yet.</p>
-        ) : (
-          <ol className="space-y-3">
-            {[...moderationLog].reverse().map((action, i) => (
-              <li key={i} className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2">
-                  <ModerationBadge action={action} className="!bg-transparent !px-0 !text-foreground" />
-                  <span className="text-muted-foreground">by {truncateAddress(action.boardAddr)}</span>
-                  {action.reason && <span className="text-muted-foreground">— {action.reason}</span>}
-                </div>
-                <span className="text-xs text-muted-foreground">{new Date(action.timestamp).toLocaleString()}</span>
-              </li>
-            ))}
-          </ol>
+        {moderationState === 'loading' && (
+          <p className="text-sm text-muted-foreground">Checking moderation log…</p>
+        )}
+        {moderationState === 'unavailable' && (
+          <p className="text-sm text-amber-700 dark:text-amber-400">
+            Couldn&apos;t reach the moderation log — that&apos;s not the same as there being nothing in it.
+          </p>
+        )}
+        {moderationState === 'ready' && (
+          moderationLog.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No moderation actions on this article yet.</p>
+          ) : (
+            <ol className="space-y-3">
+              {[...moderationLog].reverse().map((action, i) => (
+                <li key={i} className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2">
+                    <ModerationBadge action={action} className="!bg-transparent !px-0 !text-foreground" />
+                    <span className="text-muted-foreground">by {truncateAddress(action.boardAddr)}</span>
+                    {action.reason && <span className="text-muted-foreground">— {action.reason}</span>}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{new Date(action.timestamp).toLocaleString()}</span>
+                </li>
+              ))}
+            </ol>
+          )
         )}
       </section>
     </article>

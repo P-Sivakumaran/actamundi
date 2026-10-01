@@ -22,13 +22,26 @@ export default function EditArticlePageClient({ params }: { params: { slug: stri
   const { articles, loading, publishArticle } = useP2PArticles({ authorAddr: address ?? undefined })
 
   const [original, setOriginal] = useState<P2PArticle | null>(null)
+  const [newerAvailable, setNewerAvailable] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Pinned once: ArticleForm captures its own field state from
+  // initialValues at mount and won't re-sync if `original` changes under
+  // it later, so resetting `original` on every `articles` update would
+  // let the submit handler (which closes over the latest `original.cid`
+  // and coverImageCid) publish against a revision the visible form
+  // fields don't match — a silent overwrite with stale content aimed at
+  // the wrong prevCid. Surface newer revisions instead of swapping to them.
   useEffect(() => {
     const found = articles.find((a) => a.slug === params.slug) ?? null
-    if (found) setOriginal(found)
-  }, [articles, params.slug])
+    if (!found) return
+    if (!original) {
+      setOriginal(found)
+    } else if (found.cid !== original.cid) {
+      setNewerAvailable(true)
+    }
+  }, [articles, params.slug, original])
 
   async function handleSubmit(values: ArticleFormSubmitValues) {
     if (!original) return
@@ -90,23 +103,33 @@ export default function EditArticlePageClient({ params }: { params: { slug: stri
   }
 
   return (
-    <ArticleForm
-      heading="Edit Article"
-      authorAddr={address}
-      initialValues={{
-        title: original.title,
-        excerpt: original.excerpt ?? '',
-        category: original.category ?? '',
-        content: original.content,
-        status: original.status,
-      }}
-      initialImagePreview={coverImageUrl(original.coverImageCid) ?? null}
-      submitLabel="Save Changes"
-      savingLabel="Saving..."
-      saving={saving}
-      error={error}
-      onSubmit={handleSubmit}
-      onCancel={() => router.push('/admin/articles')}
-    />
+    <>
+      {newerAvailable && (
+        <div className="mx-auto mb-4 flex max-w-3xl items-center justify-between gap-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          <span>A newer version of this article was saved elsewhere. Reload to see it before continuing.</span>
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            Reload
+          </Button>
+        </div>
+      )}
+      <ArticleForm
+        heading="Edit Article"
+        authorAddr={address}
+        initialValues={{
+          title: original.title,
+          excerpt: original.excerpt ?? '',
+          category: original.category ?? '',
+          content: original.content,
+          status: original.status,
+        }}
+        initialImagePreview={coverImageUrl(original.coverImageCid) ?? null}
+        submitLabel="Save Changes"
+        savingLabel="Saving..."
+        saving={saving}
+        error={error}
+        onSubmit={handleSubmit}
+        onCancel={() => router.push('/admin/articles')}
+      />
+    </>
   )
 }

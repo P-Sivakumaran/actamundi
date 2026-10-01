@@ -11,18 +11,19 @@ export function ArticleFeedCard({
   coverImageUrl,
   moderation,
   priority = false,
+  linkToArticle = true,
 }: {
   article: P2PArticle
   coverImageUrl: string | undefined
   moderation: ModerationAction | undefined
   priority?: boolean
+  /** false for the admin live-preview pane — a card that isn't published
+   * yet has nowhere real to navigate to, and shouldn't discard in-progress
+   * editing state by acting like a link out of the form. */
+  linkToArticle?: boolean
 }) {
-  return (
-    <Link
-      href={`/articles/${article.cid}`}
-      className="relative block h-full w-full shrink-0 snap-start overflow-hidden"
-      aria-label={`Read article: ${article.title}`}
-    >
+  const content = (
+    <>
       {coverImageUrl ? (
         <Image
           src={coverImageUrl}
@@ -55,6 +56,7 @@ export function ArticleFeedCard({
         )}
         <div className="mt-3 flex items-center gap-3 text-xs text-white/70">
           <span>{truncateAddress(article.authorAddr)}</span>
+          <span>{new Date(article.createdAt).toLocaleDateString()}</span>
           {article.readingTime > 0 && (
             <span className="inline-flex items-center gap-0.5">
               <Clock className="h-3 w-3" />
@@ -63,6 +65,18 @@ export function ArticleFeedCard({
           )}
         </div>
       </div>
+    </>
+  )
+
+  const className = 'relative block h-full w-full shrink-0 snap-start overflow-hidden'
+
+  if (!linkToArticle) {
+    return <div className={className}>{content}</div>
+  }
+
+  return (
+    <Link href={`/articles/${article.cid}`} aria-label={`Read article: ${article.title}`} className={className}>
+      {content}
     </Link>
   )
 }

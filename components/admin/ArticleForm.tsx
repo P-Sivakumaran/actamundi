@@ -177,6 +177,7 @@ export function ArticleForm({
                 article={previewArticle}
                 coverImageUrl={imagePreview ?? undefined}
                 moderation={undefined}
+                linkToArticle={false}
               />
             </div>
           </div>
