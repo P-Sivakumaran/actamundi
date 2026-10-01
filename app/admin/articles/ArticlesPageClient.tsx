@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -16,11 +17,14 @@ import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { useP2PArticles, type ArticleFilters } from '@/hooks/use-p2p-articles'
 import { useWalletAddress } from '@/hooks/use-wallet-address'
+import { coverImageUrl } from '@/lib/p2p/articles'
+import { ModerationBadge } from '@/components/ModerationBadge'
+import { fallbackGradient } from '@/lib/utils'
 
 export default function ArticlesPageClient() {
   const router = useRouter()
   const { address, connecting, connect } = useWalletAddress()
-  const { articles, loading, error, filterArticles, deleteArticle } = useP2PArticles({
+  const { articles, loading, error, filterArticles, deleteArticle, moderationStatus } = useP2PArticles({
     authorAddr: address ?? undefined,
   })
   const [filters, setFilters] = useState<ArticleFilters>({})
@@ -78,22 +82,38 @@ export default function ArticlesPageClient() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead></TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Trust</TableHead>
               <TableHead>Published</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {visibleArticles.map((article) => (
+            {visibleArticles.map((article) => {
+              const cover = coverImageUrl(article.coverImageCid)
+              return (
               <TableRow key={article.slug}>
+                <TableCell>
+                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md">
+                    {cover ? (
+                      <Image src={cover} alt="" fill sizes="40px" className="object-cover" />
+                    ) : (
+                      <div className={`absolute inset-0 bg-gradient-to-br ${fallbackGradient(article.cid)}`} />
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="font-medium">{article.title}</TableCell>
                 <TableCell>{article.category}</TableCell>
                 <TableCell>
                   <Badge variant={article.status === 'published' ? 'default' : 'secondary'}>
                     {article.status}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  <ModerationBadge action={moderationStatus.get(article.cid)} className="!bg-transparent !px-0 !text-foreground" />
                 </TableCell>
                 <TableCell>
                   {article.publishedAt
@@ -126,7 +146,8 @@ export default function ArticlesPageClient() {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+              )
+            })}
           </TableBody>
         </Table>
       </div>
