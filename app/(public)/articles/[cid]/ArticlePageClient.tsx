@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import DOMPurify from 'dompurify'
 import { CheckCircle2, Clock, History, ShieldQuestion, AlertCircle } from 'lucide-react'
 import { fetchArticleByCid, coverImageUrl } from '@/lib/p2p/articles'
 import { fetchModerationLog, subscribeToModeration, type ModerationAction } from '@/lib/p2p/moderation'
@@ -105,6 +106,14 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
     return () => { cancelled = true; unsubscribe?.() }
   }, [article?.cid])
 
+  // article.content is peer-supplied HTML (TipTap output replicated over p2p);
+  // sanitize before dangerouslySetInnerHTML so a malicious peer can't inject
+  // scripts — a valid signature only proves authorship, not safe markup.
+  const sanitizedContent = useMemo(
+    () => (article ? DOMPurify.sanitize(article.content) : ''),
+    [article]
+  )
+
   if (error) notFound()
 
   if (!article) {
@@ -182,7 +191,7 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
 
       <div
         className="prose prose-lg max-w-none"
-        dangerouslySetInnerHTML={{ __html: article.content }}
+        dangerouslySetInnerHTML={{ __html: sanitizedContent }}
       />
 
       {history.length > 0 && (
