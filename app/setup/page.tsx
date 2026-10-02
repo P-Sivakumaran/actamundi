@@ -18,6 +18,7 @@ export default function SetupPage() {
       name: formData.get('name') as string,
       email: formData.get('email') as string,
       password: formData.get('password') as string,
+      token: formData.get('token') as string,
     }
 
     try {
@@ -53,6 +54,10 @@ export default function SetupPage() {
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Create your admin account
+          </p>
+          <p className="mt-2 text-center text-xs text-gray-500">
+            Requires the deployment&apos;s SETUP_TOKEN, set by whoever
+            configured this instance.
           </p>
         </div>
 
@@ -101,8 +106,21 @@ export default function SetupPage() {
                 type="password"
                 autoComplete="new-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
                 placeholder="Password"
+              />
+            </div>
+            <div>
+              <label htmlFor="token" className="sr-only">
+                Setup token
+              </label>
+              <input
+                id="token"
+                name="token"
+                type="password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+                placeholder="Setup token"
               />
             </div>
           </div>
