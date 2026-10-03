@@ -15,12 +15,6 @@ Reusable UI components that are not specific to any feature. These components ar
 ### `/providers`
 Context providers and higher-order components that manage application state and provide functionality to child components.
 
-### `/articles`
-Components specific to article-related features:
-- ArticleCard: Displays article previews
-- ArticlePreview: Shows article content
-- ArticleSearch: Handles article search functionality
-
 ### `/truth-verification`
 Components for the truth verification system:
 - TruthVerification: Main component for managing claims and verifications
