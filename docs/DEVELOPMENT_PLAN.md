@@ -8,7 +8,7 @@ Priority: **P0** blocking, **P1** important, **P2** nice-to-have.
 
 - [x] **[security]** Sanitize article HTML — detail page renders peer-supplied content via `dangerouslySetInnerHTML`; author signatures give no XSS protection. _Done: `404c44e` — DOMPurify at the single render site, codex review clean on first pass._
   _zev cross-check: routed to `p2p` (0.56) instead of `security` — flagged, content originates from p2p replication but the defect is a rendering/sanitization gap. Tag as both._
-- **[security]** Secure legacy API routes — MongoDB article mutations and Cloudinary uploads lack route-level auth and ownership checks.
+- [x] **[security]** Secure legacy API routes — MongoDB article mutations and Cloudinary uploads lack route-level auth and ownership checks. _Done: `f5b7ca7` — deleted rather than hardened; zero callers remained after the p2p pivot, so removing is strictly safer than adding auth to dead code._
 - [x] **[security]** Lock down administrator bootstrap — `/api/setup` lets the first unauthenticated caller become admin; concurrent setup races possible. _Done: `7d310b3` — SETUP_TOKEN + single-transaction sentinel upsert. Took 5 codex review rounds: naive lock → unrecoverable on crash → un-fenced reclaim allowed concurrent owners → landed on a DB-serialized transaction, which needs no app-level lock at all. See commit body._
 - **[p2p]** Implement remote block retrieval and durable replication — only an IndexedDB blockstore exists; announced CIDs don't resolve across browsers, cover images aren't gateway-available.
 - **[p2p]** Authenticate article identity and revision ordering — slug-only feed keys and unsigned `updatedAt` allow cross-author replacement and timestamp manipulation.
