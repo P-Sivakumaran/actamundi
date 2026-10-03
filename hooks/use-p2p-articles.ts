@@ -32,11 +32,23 @@ interface UseP2PArticlesOptions {
  * Returns the same { articles, loading, error, categories } shape;
  * filtering moves client-side since there's no server to query params against.
  */
+/**
+ * Keys the feed map by author + slug, not slug alone. The category feed
+ * merges announcements from every author into one map; a slug-only key
+ * would let any author's publish silently replace an unrelated author's
+ * article of the same slug in the rendered feed (cross-author
+ * replacement) — a wallet-signed article can't be forged, but it can
+ * collide on the string another author happened to pick.
+ */
+function feedKey(article: Pick<P2PArticle, 'authorAddr' | 'slug'>): string {
+  return `${article.authorAddr.toLowerCase()}:${article.slug}`
+}
+
 export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions = {}) {
   const [articles, setArticles] = useState<P2PArticle[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const bySlug = useRef<Map<string, P2PArticle>>(new Map())
+  const byAuthorSlug = useRef<Map<string, P2PArticle>>(new Map())
   const [moderationStatus, setModerationStatus] = useState<Map<string, ModerationAction>>(new Map())
   const [moderationReady, setModerationReady] = useState(false)
   const [moderationError, setModerationError] = useState<string | null>(null)
@@ -71,16 +83,26 @@ export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions =
   const visibleArticles = moderationReady ? articles.filter((a) => !isDelisted(a.cid)) : []
 
   const applyArticle = useCallback((article: P2PArticle) => {
-    const existing = bySlug.current.get(article.slug)
+    const key = feedKey(article)
+    const existing = byAuthorSlug.current.get(key)
     if (existing && new Date(existing.updatedAt) > new Date(article.updatedAt)) return
-    bySlug.current.set(article.slug, article)
-    setArticles(Array.from(bySlug.current.values()))
+    byAuthorSlug.current.set(key, article)
+    setArticles(Array.from(byAuthorSlug.current.values()))
   }, [])
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError(null)
+    // Scope is changing (e.g. a different wallet connects, or the public
+    // feed switches category) — drop whatever the previous scope loaded.
+    // Composite keys stop cross-author collisions, but across a scope
+    // change they'd otherwise accumulate the old scope's rows forever
+    // (never naturally overwritten), and the admin table still acts on
+    // rows by slug alone, so a stale row from the old scope could get
+    // deleted/edited in the new scope's place.
+    byAuthorSlug.current.clear()
+    setArticles([])
 
     async function load() {
       try {
@@ -102,6 +124,12 @@ export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions =
     const unsubscribe = subscribeToCategory(category, async (cid) => {
       try {
         const article = await fetchArticleByCid(cid)
+        // Author-scoped hooks (the admin "my articles" view) still
+        // subscribe to the category topic — undefined category just means
+        // "general" — so without this filter, a same-slug article from a
+        // different author would land in a map the UI assumes is one
+        // author's own, and e.g. feed Delete into deleting the wrong row.
+        if (authorAddr && article.authorAddr.toLowerCase() !== authorAddr.toLowerCase()) return
         if (!cancelled) applyArticle(article)
       } catch (err) {
         console.error('Failed to resolve announced article cid', cid, err)
@@ -131,11 +159,13 @@ export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions =
    * that respect tombstone: true, while history stays intact for auditing.
    */
   const deleteArticle = useCallback(async (slug: string) => {
-    const existing = bySlug.current.get(slug)
+    if (!authorAddr) return
+    const key = feedKey({ authorAddr, slug })
+    const existing = byAuthorSlug.current.get(key)
     if (!existing) return
 
-    bySlug.current.delete(slug)
-    setArticles(Array.from(bySlug.current.values()))
+    byAuthorSlug.current.delete(key)
+    setArticles(Array.from(byAuthorSlug.current.values()))
 
     if (typeof window === 'undefined' || !window.ethereum) return
     const provider = new ethers.BrowserProvider(window.ethereum as any)
@@ -154,7 +184,7 @@ export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions =
       },
       signer
     )
-  }, [])
+  }, [authorAddr])
 
   const filterArticles = useCallback(
     (filters: ArticleFilters): P2PArticle[] => {
