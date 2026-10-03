@@ -38,11 +38,22 @@ contract TruthVerification is ReentrancyGuard, Pausable {
         bool isFalsehood;
         uint256 verificationThreshold;
         uint256 disputeThreshold;
-        uint256 falsehoodScore;
+        // Raw sum of every distinct contribution, qualifying or not —
+        // getClaim() divides by falsehoodContributionCount to report the
+        // mean. Storing the sum (not a running average) avoids compounding
+        // integer-division truncation: averaging an already-truncated
+        // average back in is lossy and order-dependent (50,51,52 summed
+        // then divided once is 51 either order; averaged incrementally,
+        // 50,51,52 gives 50 while 50,52,51 gives 51 — same inputs, two
+        // different stored numbers).
+        uint256 falsehoodScoreSum;
+        uint256 falsehoodVoteCount; // distinct qualifying (>= MIN_FALSEHOOD_SCORE_TO_COUNT) votes — gates isFalsehood
+        uint256 falsehoodContributionCount; // every distinct vote, qualifying or not — denominator for falsehoodScoreSum's mean
         string[] supportingEvidence;
         string[] contradictingEvidence;
         mapping(address => bool) hasVerified;
         mapping(address => bool) hasDisputed;
+        mapping(address => bool) hasDetectedFalsehood;
         mapping(address => uint256) verificationTimestamp;
         mapping(address => uint256) disputeTimestamp;
         mapping(address => uint256) falsehoodScoreContribution;
@@ -115,6 +126,11 @@ contract TruthVerification is ReentrancyGuard, Pausable {
     uint256 public constant SOURCE_RELIABILITY_THRESHOLD = 70;
     uint256 public constant FALSEHOOD_DETECTION_THRESHOLD = 5;
     uint256 public constant MAX_FALSEHOOD_SCORE = 100;
+    /// @notice Per-vote bar a verifier's own score must meet to count toward
+    /// FALSEHOOD_DETECTION_THRESHOLD's distinct-verifier consensus. Below
+    /// this, the vote still records (and still penalizes the submitter) but
+    /// doesn't move the claim toward being marked a falsehood.
+    uint256 public constant MIN_FALSEHOOD_SCORE_TO_COUNT = 50;
     
     event ClaimSubmitted(bytes32 indexed claimId, string content, string source, address author);
     event ClaimVerified(bytes32 indexed claimId, address verifier);
@@ -214,27 +230,42 @@ contract TruthVerification is ReentrancyGuard, Pausable {
         require(verifiers[msg.sender].lockedStake >= MIN_STAKE, "Insufficient stake");
         require(block.timestamp >= lastFalsehoodDetectionTime[msg.sender] + FALSEHOOD_DETECTION_COOLDOWN, "Falsehood detection cooldown active");
         require(_score <= MAX_FALSEHOOD_SCORE, "Invalid falsehood score");
-        
+
         Claim storage claim = claims[_claimId];
         require(claim.timestamp > 0, "Claim does not exist");
         require(!claim.isFalsehood, "Already marked as falsehood");
-        
+        require(!claim.hasDetectedFalsehood[msg.sender], "Already detected");
+
+        claim.hasDetectedFalsehood[msg.sender] = true;
         claim.falsehoodScoreContribution[msg.sender] = _score;
-        claim.falsehoodScore = (claim.falsehoodScore + _score) / 2;
-        
-        if (claim.falsehoodScore >= FALSEHOOD_DETECTION_THRESHOLD) {
-            claim.isFalsehood = true;
+        claim.falsehoodScoreSum += _score;
+        claim.falsehoodContributionCount++;
+
+        lastFalsehoodDetectionTime[msg.sender] = block.timestamp;
+        verifiers[msg.sender].lastActivity = block.timestamp;
+
+        if (_score >= MIN_FALSEHOOD_SCORE_TO_COUNT) {
+            claim.falsehoodVoteCount++;
             verifiers[msg.sender].reputation += REPUTATION_REWARD;
             verifiers[msg.sender].successfulFalsehoodDetections++;
-            sources[claim.source].falsehoodClaims++;
-            sources[claim.source].falsehoodRate = (sources[claim.source].falsehoodClaims * 100) / sources[claim.source].totalClaims;
+
+            // Requiring FALSEHOOD_DETECTION_THRESHOLD distinct qualifying
+            // votes (not one verifier's score averaged against nothing)
+            // before marking a claim false, mirroring verifyClaim's and
+            // disputeClaim's distinct-vote-count consensus. The settlement
+            // side effect below can only ever run on the single call that
+            // crosses the threshold: require(!claim.isFalsehood) above
+            // blocks every call once it does.
+            if (claim.falsehoodVoteCount >= FALSEHOOD_DETECTION_THRESHOLD) {
+                claim.isFalsehood = true;
+                sources[claim.source].falsehoodClaims++;
+                sources[claim.source].falsehoodRate = (sources[claim.source].falsehoodClaims * 100) / sources[claim.source].totalClaims;
+            }
         } else {
             verifiers[msg.sender].reputation -= REPUTATION_PENALTY;
             verifiers[msg.sender].failedFalsehoodDetections++;
         }
-        
-        lastFalsehoodDetectionTime[msg.sender] = block.timestamp;
-        verifiers[msg.sender].lastActivity = block.timestamp;
+
         emit FalsehoodDetected(_claimId, msg.sender, _score);
     }
     
@@ -249,7 +280,13 @@ contract TruthVerification is ReentrancyGuard, Pausable {
         require(claim.timestamp > 0, "Claim does not exist");
         require(!claim.isDisputed, "Claim is disputed");
         require(!claim.isFalsehood, "Claim is marked as falsehood");
-        
+        // Without this, a distinct verifier who hasn't voted yet could
+        // still call in after verificationCount already cleared the
+        // threshold, re-running the settlement block below and inflating
+        // sources[].verifiedClaims/reliability on every extra vote instead
+        // of exactly once.
+        require(!claim.isVerified, "Claim already verified");
+
         claim.hasVerified[msg.sender] = true;
         claim.verificationCount++;
         claim.verificationTimestamp[msg.sender] = block.timestamp;
@@ -278,7 +315,12 @@ contract TruthVerification is ReentrancyGuard, Pausable {
         require(claim.timestamp > 0, "Claim does not exist");
         require(!claim.isVerified, "Claim is already verified");
         require(!claim.isFalsehood, "Claim is marked as falsehood");
-        
+        // Same reasoning as verifyClaim's isVerified guard: without this, an
+        // extra distinct disputer could re-run the settlement block below
+        // after disputeCount already cleared the threshold, inflating
+        // sources[].disputedClaims on every additional vote.
+        require(!claim.isDisputed, "Claim already disputed");
+
         claim.hasDisputed[msg.sender] = true;
         claim.disputeCount++;
         claim.disputeTimestamp[msg.sender] = block.timestamp;
@@ -400,7 +442,12 @@ contract TruthVerification is ReentrancyGuard, Pausable {
             claim.isFalsehood,
             claim.verificationThreshold,
             claim.disputeThreshold,
-            claim.falsehoodScore,
+            // Divide once, at read time — dividing the stored sum fresh
+            // every call is the only way to avoid baking in a truncated
+            // intermediate average (see falsehoodScoreSum's comment).
+            claim.falsehoodContributionCount > 0
+                ? claim.falsehoodScoreSum / claim.falsehoodContributionCount
+                : 0,
             claim.supportingEvidence,
             claim.contradictingEvidence
         );

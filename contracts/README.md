@@ -70,14 +70,23 @@ membership: schedule both role changes explicitly.
   majority-vote approval, and cancelling does not prevent a fresh proposal.
 - The immutable governor constructor checks only nonzero, not contract type.
   Use this Ignition module to get the intended timelock governance.
-- The regression tests preserve existing logic rather than changing economics:
-  evidence votes at/after the third vote earn reputation; claim verification
-  at/after threshold increments source verifiedClaims; `totalStake` remains
-  cumulative on withdrawal; falsehood score uses a rolling average and a
-  threshold of 5. `_reason` is currently unused by `detectFalsehood`.
-- These existing behaviors merit a separate economic/security review. In
-  particular, repeat qualifying evidence/claim votes can inflate reputation or
-  source statistics. This change does not silently redesign those rules.
+- The regression tests preserve existing logic rather than changing economics,
+  with two exceptions fixed as a P0 (see docs/DEVELOPMENT_PLAN.md): claim
+  verification/dispute now settle exactly once — a distinct verifier voting
+  after the threshold already cleared reverts (`"Claim already verified"` /
+  `"Claim already disputed"`) instead of re-inflating source stats — and
+  falsehood detection now requires FALSEHOOD_DETECTION_THRESHOLD (5) distinct
+  verifiers each scoring at/above MIN_FALSEHOOD_SCORE_TO_COUNT (50), rather
+  than one verifier's score alone. The reported `falsehoodScore` is an exact
+  mean (sum divided once, at `getClaim()` read time) over every distinct
+  contribution, qualifying or not — not a per-vote running average, which
+  bakes in integer-division truncation and becomes vote-order-dependent.
+  `_reason` is still unused by `detectFalsehood`. `totalStake` still remains
+  cumulative on withdrawal.
+- Evidence-vote reputation (third-and-later `verifyEvidence` calls on the same
+  evidence item each still earn reputation, uncapped) was deliberately left
+  as-is — same repeat-qualifying-vote inflation shape as the two fixed above,
+  but out of this pass's scope; still merits its own look.
 
 References checked against the installed Hardhat 3.18.0/OZ 5.6.1 sources:
 [Hardhat setup](https://hardhat.org/docs/getting-started),

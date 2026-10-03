@@ -8,7 +8,7 @@ const ZERO = ethers.ZeroHash
 const stake = ethers.parseEther('0.1')
 
 async function deployed() {
-  const [boardA, boardB, author, helperA, helperB, v1, v2, v3, outsider] = await ethers.getSigners()
+  const [boardA, boardB, author, helperA, helperB, v1, v2, v3, v4, v5, outsider] = await ethers.getSigners()
   const { timelock, truthVerification: truth } = await ignition.deploy(Governance, {
     parameters: { TruthVerificationGovernance: { boardAddrs: [boardA.address, boardB.address] } },
   })
@@ -27,12 +27,12 @@ async function deployed() {
     await networkHelpers.time.increase(DELAY)
     await operation.execute()
   }
-  return { timelock, truth, boardA, boardB, author, helperA, helperB, v1, v2, v3, outsider, scheduled, govern }
+  return { timelock, truth, boardA, boardB, author, helperA, helperB, v1, v2, v3, v4, v5, outsider, scheduled, govern }
 }
 
 async function ready() {
   const f = await deployed()
-  for (const member of [f.helperA, f.helperB, f.v1, f.v2, f.v3]) {
+  for (const member of [f.helperA, f.helperB, f.v1, f.v2, f.v3, f.v4, f.v5]) {
     await f.govern('registerVerifier', [member.address, ['factual']])
     await f.truth.connect(member).getFunction('depositStake')({ value: stake })
   }
@@ -65,6 +65,24 @@ async function experienced() {
   for (let i = 0; i < 10; i++) {
     const id = await evidence(f, training)
     for (const verifier of [f.helperA, f.helperB, f.v1, f.v2, f.v3]) {
+      await f.truth.connect(verifier).getFunction('verifyEvidence')(id)
+    }
+  }
+  return f
+}
+
+// detectFalsehood now needs FALSEHOOD_DETECTION_THRESHOLD (5) distinct
+// verifiers at MIN_REPUTATION_TO_DETECT_FALSEHOOD (200) reputation, not
+// just the three experienced() produces. Same trick as experienced() —
+// 3rd/4th/5th position in a 5-slot verifyEvidence round earns +10 — run a
+// second round with v4/v5 occupying those slots (v3 picks up more
+// reputation too, which no test depends on an exact value for).
+async function falsehoodReady() {
+  const f = await experienced()
+  const training2 = await claim(f, 'Training claim 2')
+  for (let i = 0; i < 10; i++) {
+    const id = await evidence(f, training2)
+    for (const verifier of [f.helperA, f.helperB, f.v4, f.v5, f.v3]) {
       await f.truth.connect(verifier).getFunction('verifyEvidence')(id)
     }
   }
@@ -258,23 +276,67 @@ describe('TruthVerification regression', () => {
     await expect(f.truth.connect(f.v1).getFunction('disputeClaim')(id)).to.be.revertedWith('Claim is already verified')
   })
 
-  it('detects falsehood, updates source/reputation, and enforces score/cooldown/final state', async () => {
-    const f = await networkHelpers.loadFixture(experienced)
+  it('requires five distinct qualifying detections before marking a claim false', async () => {
+    const f = await networkHelpers.loadFixture(falsehoodReady)
     const id = await claim(f)
     await expect(f.truth.connect(f.v1).getFunction('detectFalsehood')(id, 101, 'reason')).to.be.revertedWith('Invalid falsehood score')
-    await expect(f.truth.connect(f.helperA).getFunction('detectFalsehood')(id, 10, 'reason')).to.be.revertedWith('Insufficient reputation')
-    await expect(f.truth.connect(f.v1).getFunction('detectFalsehood')(id, 10, 'reason')).to.emit(f.truth, 'FalsehoodDetected').withArgs(id, f.v1.address, 10)
-    expect((await f.truth.getClaim(id)).falsehoodScore).to.equal(5n)
+    await expect(f.truth.connect(f.helperA).getFunction('detectFalsehood')(id, 60, 'reason')).to.be.revertedWith('Insufficient reputation')
+
+    // Four distinct qualifying (score >= MIN_FALSEHOOD_SCORE_TO_COUNT) votes
+    // aren't enough on their own — one verifier's score can no longer flip
+    // a claim alone.
+    for (const v of [f.v1, f.v2, f.v3, f.v4]) {
+      await expect(f.truth.connect(v).getFunction('detectFalsehood')(id, 60, 'reason')).to.emit(f.truth, 'FalsehoodDetected').withArgs(id, v.address, 60)
+    }
+    expect((await f.truth.getClaim(id)).isFalsehood).to.equal(false)
+    expect((await f.truth.getClaim(id)).falsehoodScore).to.equal(60n)
+    expect((await f.truth.getVerifier(f.v4.address)).successfulFalsehoodDetections).to.equal(1n)
+
+    // The fifth distinct qualifying vote crosses the threshold.
+    await expect(f.truth.connect(f.v5).getFunction('detectFalsehood')(id, 70, 'reason')).to.emit(f.truth, 'FalsehoodDetected').withArgs(id, f.v5.address, 70)
     expect((await f.truth.getClaim(id)).isFalsehood).to.equal(true)
-    expect((await f.truth.getVerifier(f.v1.address)).successfulFalsehoodDetections).to.equal(1n)
-    expect((await f.truth.getSource('source')).falsehoodRate).to.equal(50n)
+    expect((await f.truth.getClaim(id)).falsehoodScore).to.equal(62n) // (60*4 + 70) / 5
+    // Denominator is this source's total claims so far: one from
+    // experienced()'s training round, one from falsehoodReady()'s, and
+    // this test's `id` — 1 falsehood claim / 3 total, integer division.
+    expect((await f.truth.getSource('source')).falsehoodRate).to.equal(33n)
+
     await expect(f.truth.connect(f.v2).getFunction('verifyClaim')(id)).to.be.revertedWith('Claim is marked as falsehood')
     await expect(f.truth.connect(f.v2).getFunction('disputeClaim')(id)).to.be.revertedWith('Claim is marked as falsehood')
+
     const next = await claim(f)
-    await expect(f.truth.connect(f.v1).getFunction('detectFalsehood')(next, 10, '')).to.be.revertedWith('Falsehood detection cooldown active')
+    await expect(f.truth.connect(f.v1).getFunction('detectFalsehood')(next, 60, '')).to.be.revertedWith('Falsehood detection cooldown active')
     await networkHelpers.time.increase(14400)
-    await expect(f.truth.connect(f.v1).getFunction('detectFalsehood')(id, 10, '')).to.be.revertedWith('Already marked as falsehood')
-    await f.truth.connect(f.v1).getFunction('detectFalsehood')(next, 10, '')
+    // Still blocked, but now by the settled claim, not the cooldown.
+    await expect(f.truth.connect(f.v1).getFunction('detectFalsehood')(id, 60, '')).to.be.revertedWith('Already marked as falsehood')
+    await f.truth.connect(f.v1).getFunction('detectFalsehood')(next, 60, '')
+  })
+
+  it('rejects a second falsehood detection on the same claim from the same verifier', async () => {
+    const f = await networkHelpers.loadFixture(experienced)
+    const id = await claim(f)
+    // Qualifying score, so reputation goes up (not down past the 200
+    // floor the second call's own reputation check requires).
+    await f.truth.connect(f.v1).getFunction('detectFalsehood')(id, 60, '')
+    await networkHelpers.time.increase(14400)
+    await expect(f.truth.connect(f.v1).getFunction('detectFalsehood')(id, 60, '')).to.be.revertedWith('Already detected')
+  })
+
+  it('blocks a distinct 4th verification/dispute vote once a claim is already settled', async () => {
+    const f = await networkHelpers.loadFixture(falsehoodReady)
+    const verified = await claim(f)
+    for (const v of [f.v1, f.v2, f.v3]) await f.truth.connect(v).getFunction('verifyClaim')(verified)
+    expect((await f.truth.getClaim(verified)).isVerified).to.equal(true)
+    const verifiedClaimsBefore = (await f.truth.getSource('source')).verifiedClaims
+    await expect(f.truth.connect(f.helperA).getFunction('verifyClaim')(verified)).to.be.revertedWith('Claim already verified')
+    expect((await f.truth.getSource('source')).verifiedClaims).to.equal(verifiedClaimsBefore)
+
+    const disputed = await claim(f)
+    for (const v of [f.v1, f.v2, f.v3]) await f.truth.connect(v).getFunction('disputeClaim')(disputed)
+    expect((await f.truth.getClaim(disputed)).isDisputed).to.equal(true)
+    const disputedClaimsBefore = (await f.truth.getSource('source')).disputedClaims
+    await expect(f.truth.connect(f.v4).getFunction('disputeClaim')(disputed)).to.be.revertedWith('Claim already disputed')
+    expect((await f.truth.getSource('source')).disputedClaims).to.equal(disputedClaimsBefore)
   })
 
   it('preserves the existing penalty for a sub-threshold falsehood score', async () => {
@@ -284,6 +346,29 @@ describe('TruthVerification regression', () => {
     expect((await f.truth.getClaim(id)).isFalsehood).to.equal(false)
     expect((await f.truth.getVerifier(f.v1.address)).reputation).to.equal(180n)
     expect((await f.truth.getVerifier(f.v1.address)).failedFalsehoodDetections).to.equal(1n)
+  })
+
+  it('computes the falsehood-score mean independent of vote order, with no truncation drift', async () => {
+    // getClaim() divides the stored sum once, at read time. Averaging
+    // incrementally instead (score_i folded into a running average via
+    // integer division each vote) bakes in whatever an earlier division
+    // truncated away — 50,51,52 folded in that order yields a stored 50,
+    // while 50,52,51 yields 51, for the same three contributions. Summing
+    // and dividing once gives the same correct floor(153/3)=51 regardless
+    // of order.
+    const f = await networkHelpers.loadFixture(falsehoodReady)
+    const claimA = await claim(f, 'Order A')
+    await f.truth.connect(f.v1).getFunction('detectFalsehood')(claimA, 50, '')
+    await f.truth.connect(f.v2).getFunction('detectFalsehood')(claimA, 51, '')
+    await f.truth.connect(f.v3).getFunction('detectFalsehood')(claimA, 52, '')
+    expect((await f.truth.getClaim(claimA)).falsehoodScore).to.equal(51n)
+
+    await networkHelpers.time.increase(14400) // clear v1/v2/v3's detection cooldown
+    const claimB = await claim(f, 'Order B')
+    await f.truth.connect(f.v1).getFunction('detectFalsehood')(claimB, 50, '')
+    await f.truth.connect(f.v3).getFunction('detectFalsehood')(claimB, 52, '')
+    await f.truth.connect(f.v2).getFunction('detectFalsehood')(claimB, 51, '')
+    expect((await f.truth.getClaim(claimB)).falsehoodScore).to.equal(51n)
   })
 
   it('enforces stake bounds/lock and transfers withdrawn stake after 30 days', async () => {
