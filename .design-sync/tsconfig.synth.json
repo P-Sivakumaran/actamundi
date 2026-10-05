@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["./*"],
+      "next/image": ["./.design-sync/shims/next-image.tsx"],
+      "next/link": ["./.design-sync/shims/next-link.tsx"],
+      "next/navigation": ["./.design-sync/shims/next-navigation.tsx"],
+      "@sentry/nextjs": ["./.design-sync/shims/sentry-nextjs.tsx"]
+    }
+  }
+}

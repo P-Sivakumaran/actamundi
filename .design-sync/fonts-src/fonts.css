@@ -1,0 +1,37 @@
+/* design-sync local font source — latin-subset woff2 files fetched directly
+   from fonts.gstatic.com (same files next/font/google would serve), since
+   app/layout.tsx's next/font/google usage generates hashed files at
+   Next.js build time that a static scrape can't discover. See
+   .design-sync/NOTES.md. Referenced via cfg.extraFonts. */
+
+@font-face {
+  font-family: 'Bodoni Moda';
+  font-style: italic;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('./bodoni-moda-italic-400-900.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Bodoni Moda';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('./bodoni-moda-normal-400-900.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./lato-normal-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./lato-normal-700.woff2') format('woff2');
+}

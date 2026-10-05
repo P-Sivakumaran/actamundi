@@ -1,0 +1,39 @@
+{
+  "projectId": "70954c8c-f844-41f0-a752-0b115f2c6bbf",
+  "shape": "package",
+  "pkg": "actamundi",
+  "globalName": "ActaMundi",
+  "srcDir": "components",
+  "tsconfig": "./.design-sync/tsconfig.synth.json",
+  "cssEntry": "./.design-sync/.generated/tailwind.css",
+  "buildCmd": "npx tailwindcss -c ./.design-sync/tailwind.config.synth.js -i ./app/globals.css -o ./.design-sync/.generated/tailwind.css && node ./.design-sync/append-font-vars.mjs ./.design-sync/.generated/tailwind.css",
+  "extraFonts": ["./.design-sync/fonts-src/fonts.css"],
+  "readmeHeader": ".design-sync/conventions.md",
+  "componentSrcMap": {
+    "TruthVerification": "components/TruthVerification.tsx"
+  },
+  "overrides": {
+    "ArticleFeedCard": { "cardMode": "column" },
+    "ArticleForm": { "cardMode": "column" },
+    "Card": { "cardMode": "column" },
+    "Tabs": { "cardMode": "column" },
+    "TruthVerification": { "cardMode": "column" },
+    "Dialog": { "cardMode": "single", "primaryStory": "Open" },
+    "DialogClose": { "cardMode": "single", "primaryStory": "Default" },
+    "DialogContent": { "cardMode": "single", "primaryStory": "Default" },
+    "DialogDescription": { "cardMode": "single", "primaryStory": "Default" },
+    "DialogFooter": { "cardMode": "single", "primaryStory": "Default" },
+    "DialogHeader": { "cardMode": "single", "primaryStory": "Default" },
+    "DialogTitle": { "cardMode": "single", "primaryStory": "Default" },
+    "Select": { "cardMode": "single", "primaryStory": "Open" },
+    "SelectContent": { "cardMode": "single", "primaryStory": "Open" },
+    "SelectGroup": { "cardMode": "single", "primaryStory": "Default" },
+    "SelectItem": { "cardMode": "single", "primaryStory": "Open" },
+    "SelectLabel": { "cardMode": "single", "primaryStory": "Default" },
+    "SelectSeparator": { "cardMode": "single", "primaryStory": "Default" }
+  },
+  "libOverrides": {
+    "dts.mjs": "repo-root types/ dir holds ambient declaration augmentation (next-auth.d.ts, orbitdb.d.ts, window.d.ts), not a components export surface — upstream findTypesRoot's 'types' candidate matched it by name coincidence",
+    "source-kit.mjs": "(1) static './dts.mjs' import bypasses package-build.mjs's override-aware loader — picks up the dts.mjs fork via sibling relative resolution. (2) synth content-scan was gated on components.length===0, which cfg.componentSrcMap's add side effect defeated when pinning TruthVerification — now always runs in synth-entry mode, unioned with componentSrcMap. (3) synth entry now exports the process-polyfill shim first (see .design-sync/shims/process-polyfill.mjs) — components/TruthVerification.tsx reads process.env.NEXT_PUBLIC_TRUTH_VERIFICATION_ADDRESS at module top level, which bundle.mjs's NODE_ENV-only esbuild define doesn't cover, crashing the whole IIFE before window.ActaMundi populates. (4) synth entry now excludes the unused components/truth-verification/TruthVerification.tsx duplicate by file path (ambiguous `export *` name collision was silently dropping window.ActaMundi.TruthVerification per ES module spec) and emits `export {default as Name}` instead of blind `export *` for default-exported files (ArticleSearch, RichTextEditor), since `export *` never forwards a default export. common.mjs/bundle.mjs imports repointed at staged lib, unmodified otherwise"
+  }
+}

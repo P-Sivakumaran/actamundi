@@ -171,7 +171,67 @@
     --color-border: var(--color-warm-gray-200);
     --color-input: var(--color-warm-gray-200);
     --color-ring: var(--color-teal-500);
-    
+
+    /* -------------- BARE-NAME ALIASES --------------
+     * tailwind.config.js's `colors` block (e.g. `primary: { DEFAULT: 'hsl(var(--primary))' }`)
+     * references these bare names, but only the --color-* prefixed versions
+     * above were ever defined — so bg-primary, bg-background, text-foreground,
+     * border-border, bg-card, bg-muted, bg-destructive, bg-secondary,
+     * bg-accent, bg-success/warning/info, gray-*, and primary-700/800 all
+     * resolved to `hsl(var(--undefined))` (an invalid declaration the
+     * cascade silently drops) site-wide. Pure forwarding aliases — no
+     * existing name changes, no values change. */
+    --background: var(--color-background);
+    --foreground: var(--color-foreground);
+    --card: var(--color-card);
+    --card-foreground: var(--color-card-foreground);
+    --popover: var(--color-popover);
+    --popover-foreground: var(--color-popover-foreground);
+    --primary: var(--color-primary);
+    --primary-foreground: var(--color-primary-foreground);
+    --primary-500: var(--color-teal-500);
+    --primary-600: var(--color-teal-600);
+    --primary-700: var(--color-teal-700);
+    --primary-800: var(--color-teal-800);
+    --secondary: var(--color-secondary);
+    --secondary-foreground: var(--color-secondary-foreground);
+    /* --color-secondary is itself an alias for warm-gray-500 (see its
+     * definition above) — the numbered scale below extends that same
+     * mapping for from-/to- gradient-stop usage (Button's "premium" variant). */
+    --secondary-500: var(--color-warm-gray-500);
+    --secondary-600: var(--color-warm-gray-600);
+    --secondary-700: var(--color-warm-gray-700);
+    --accent: var(--color-accent);
+    --accent-foreground: var(--color-accent-foreground);
+    --success: var(--color-success);
+    --success-foreground: var(--color-success-foreground);
+    --warning: var(--color-warning);
+    --warning-foreground: var(--color-warning-foreground);
+    --error: var(--color-error);
+    --info: var(--color-info);
+    --info-foreground: var(--color-info-foreground);
+    --destructive: var(--color-destructive);
+    --destructive-foreground: var(--color-destructive-foreground);
+    --muted: var(--color-muted);
+    --muted-foreground: var(--color-muted-foreground);
+    --border: var(--color-border);
+    --input: var(--color-input);
+    --ring: var(--color-ring);
+    /* No dedicated neutral-gray primitive scale exists in this token system
+     * (gray-N utility usage throughout components/ predates it) — reusing
+     * the existing warm-gray primitive scale rather than inventing a new,
+     * undocumented palette. */
+    --gray-50: var(--color-warm-gray-50);
+    --gray-100: var(--color-warm-gray-100);
+    --gray-200: var(--color-warm-gray-200);
+    --gray-300: var(--color-warm-gray-300);
+    --gray-400: var(--color-warm-gray-400);
+    --gray-500: var(--color-warm-gray-500);
+    --gray-600: var(--color-warm-gray-600);
+    --gray-700: var(--color-warm-gray-700);
+    --gray-800: var(--color-warm-gray-800);
+    --gray-900: var(--color-warm-gray-900);
+
     /* Spacing derived from sizing system (fluid) */
     --space-1: clamp(var(--size-1), 0.2rem + 0.25vw, var(--size-2));
     --space-2: clamp(var(--size-2), 0.4rem + 0.5vw, var(--size-3));
@@ -230,6 +290,36 @@
     --color-border: 220 15% 20%;
     --color-input: 220 15% 18%;
     --color-ring: 230 80% 65%;
+
+    /* Bare-name aliases — see the :root block above for why these exist.
+     * Only the theme-dependent ones are re-pointed here; primary-700/800
+     * and the gray-* scale are primitives that don't change with theme. */
+    --background: var(--color-background);
+    --foreground: var(--color-foreground);
+    --card: var(--color-card);
+    --card-foreground: var(--color-card-foreground);
+    --popover: var(--color-popover);
+    --popover-foreground: var(--color-popover-foreground);
+    --primary: var(--color-primary);
+    --primary-foreground: var(--color-primary-foreground);
+    --secondary: var(--color-secondary);
+    --secondary-foreground: var(--color-secondary-foreground);
+    --accent: var(--color-accent);
+    --accent-foreground: var(--color-accent-foreground);
+    --success: var(--color-success);
+    --success-foreground: var(--color-success-foreground);
+    --warning: var(--color-warning);
+    --warning-foreground: var(--color-warning-foreground);
+    --error: var(--color-error);
+    --info: var(--color-info);
+    --info-foreground: var(--color-info-foreground);
+    --destructive: var(--color-destructive);
+    --destructive-foreground: var(--color-destructive-foreground);
+    --muted: var(--color-muted);
+    --muted-foreground: var(--color-muted-foreground);
+    --border: var(--color-border);
+    --input: var(--color-input);
+    --ring: var(--color-ring);
   }
 }
 
