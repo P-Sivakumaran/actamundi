@@ -10,6 +10,7 @@ import { fetchArticleByCid, coverImageUrl } from '@/lib/p2p/articles'
 import { fetchModerationLog, subscribeToModeration, type ModerationAction } from '@/lib/p2p/moderation'
 import { ModerationBadge } from '@/components/ModerationBadge'
 import { SignatureFlip } from '@/components/motion/SignatureFlip'
+import { SupportWriter } from '@/components/SupportWriter'
 import { truncateAddress, fallbackGradient } from '@/lib/utils'
 import type { P2PArticle } from '@/models/P2PArticle'
 
@@ -164,6 +165,8 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
           page could reach a renderable article, so there's no live
           'verifying' moment here — mounts straight into the resolved state. */}
       <SignatureFlip address={article.authorAddr} status="verified" className="mb-6" />
+
+      <SupportWriter writerAddr={article.authorAddr} className="mb-6" />
 
       <div className="mb-8 flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 px-4 py-3 text-sm">
         {moderationState === 'loading' && (
