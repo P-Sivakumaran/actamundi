@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
-import { Bodoni_Moda, Lato } from 'next/font/google'
+import { Bodoni_Moda, Lato, Newsreader, Instrument_Sans, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
+import './motion.css'
 import { NetworkIndicator } from '@/components/NetworkIndicator'
 import { StyledComponentsRegistry } from '@/lib/styled-registry'
 import { ThemeProvider } from '@/components/providers/ThemeProvider'
@@ -11,13 +12,39 @@ import { SkipLink } from '@/components/ui/skiplink'
 import Link from 'next/link'
 import { ErrorProvider } from '@/components/providers/ErrorProvider'
 import { CopyrightYear } from '@/components/ui/copyright-year'
+import { GlobeMark } from '@/components/brand/GlobeMark'
 
+// Masthead only — hairlines read beautifully at display sizes.
 const bodoniModa = Bodoni_Moda({
   subsets: ['latin'],
   variable: '--font-bodoni-moda',
   display: 'swap',
 })
 
+// Headlines + article body. Optical sizes 6–72 keep one family crisp at every size.
+const newsreader = Newsreader({
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  axes: ['opsz'],
+  variable: '--font-newsreader',
+  display: 'swap',
+})
+
+// UI chrome.
+const instrumentSans = Instrument_Sans({
+  subsets: ['latin'],
+  variable: '--font-instrument-sans',
+  display: 'swap',
+})
+
+// Wallet addresses, CIDs, signatures — content, so they get their own voice.
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  display: 'swap',
+})
+
+// Kept loaded during migration so any hard-coded 'Lato' still resolves; remove once unused.
 const lato = Lato({
   subsets: ['latin'],
   weight: ['400', '700'],
@@ -36,7 +63,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${bodoniModa.variable} ${lato.variable}`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${bodoniModa.variable} ${newsreader.variable} ${instrumentSans.variable} ${jetbrainsMono.variable} ${lato.variable}`}
+      suppressHydrationWarning
+    >
       <body className="font-sans antialiased bg-background text-foreground">
         <ThemeProvider>
           <StyledComponentsRegistry>
@@ -46,10 +77,12 @@ export default function RootLayout({
                 <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                   <div className="container flex h-16 items-center justify-between">
                     <div className="flex items-center">
-                      <Link href="/" className="flex items-center space-x-2 mr-8">
-                        <span className="text-xl font-bold text-primary">ActaMundi</span>
+                      <Link href="/" className="flex items-center gap-2 mr-8" aria-label="ActaMundi home">
+                        {/* Fans open once on first load, then rests. No idle rotation in the header. */}
+                        <GlobeMark size={36} rotate={false} interactive={false} label="" />
+                        <span className="am-wordmark text-lg text-foreground">Acta Mundi</span>
                       </Link>
-                      
+
                       <nav className="hidden md:flex items-center space-x-6">
                         <Link href="/politics" className="text-sm font-medium text-gray-700 hover:text-primary transition-colors dark:text-gray-300">
                           Politics
@@ -62,7 +95,7 @@ export default function RootLayout({
                         </Link>
                       </nav>
                     </div>
-                    
+
                     <div className="flex items-center space-x-4">
                       <ThemeSwitcher />
                       <NetworkIndicator />
@@ -124,4 +157,4 @@ export default function RootLayout({
       </body>
     </html>
   )
-} 
+}

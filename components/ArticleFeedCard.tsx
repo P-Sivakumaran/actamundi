@@ -1,8 +1,8 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { Clock } from 'lucide-react'
-import { ModerationBadge } from '@/components/ModerationBadge'
-import { truncateAddress, fallbackGradient } from '@/lib/utils'
+import { ModerationBadge, moderationStatus } from '@/components/ModerationBadge'
+import { cn, truncateAddress, fallbackGradient } from '@/lib/utils'
 import type { P2PArticle } from '@/models/P2PArticle'
 import type { ModerationAction } from '@/lib/p2p/moderation'
 
@@ -68,7 +68,11 @@ export function ArticleFeedCard({
     </>
   )
 
-  const className = 'relative block h-full w-full shrink-0 snap-start overflow-hidden'
+  const delisted = moderationStatus(moderation) === 'delisted'
+  const className = cn(
+    'relative block h-full w-full shrink-0 snap-start overflow-hidden',
+    delisted ? 'am-delisted' : 'am-listed'
+  )
 
   if (!linkToArticle) {
     return <div className={className}>{content}</div>

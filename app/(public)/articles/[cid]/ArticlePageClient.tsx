@@ -5,10 +5,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import DOMPurify from 'dompurify'
-import { CheckCircle2, Clock, History, ShieldQuestion, AlertCircle } from 'lucide-react'
+import { Clock, History, ShieldQuestion, AlertCircle } from 'lucide-react'
 import { fetchArticleByCid, coverImageUrl } from '@/lib/p2p/articles'
 import { fetchModerationLog, subscribeToModeration, type ModerationAction } from '@/lib/p2p/moderation'
 import { ModerationBadge } from '@/components/ModerationBadge'
+import { SignatureFlip } from '@/components/motion/SignatureFlip'
 import { truncateAddress, fallbackGradient } from '@/lib/utils'
 import type { P2PArticle } from '@/models/P2PArticle'
 
@@ -149,7 +150,6 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
         <h1 className="mb-3 text-3xl font-bold text-foreground sm:text-4xl">{article.title}</h1>
         {article.excerpt && <p className="mb-4 text-lg text-muted-foreground">{article.excerpt}</p>}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-          <span>{truncateAddress(article.authorAddr)}</span>
           <span>{new Date(article.createdAt).toLocaleDateString()}</span>
           {article.readingTime > 0 && (
             <span className="inline-flex items-center gap-1">
@@ -160,12 +160,12 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
         </div>
       </header>
 
+      {/* fetchArticleByCid() already rejected a bad signature before this
+          page could reach a renderable article, so there's no live
+          'verifying' moment here — mounts straight into the resolved state. */}
+      <SignatureFlip address={article.authorAddr} status="verified" className="mb-6" />
+
       <div className="mb-8 flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 px-4 py-3 text-sm">
-        <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
-          <CheckCircle2 className="h-4 w-4" />
-          Signature verified
-        </span>
-        <span className="text-muted-foreground">·</span>
         {moderationState === 'loading' && (
           <span className="text-muted-foreground">Checking moderation status…</span>
         )}

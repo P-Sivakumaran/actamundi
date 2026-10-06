@@ -1,10 +1,13 @@
 'use client'
 
 import React from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import ArticleSearch from '@/components/ArticleSearch'
-import { Skeleton } from '@/components/ui/skeleton'
 import { ArticleFeedCard } from '@/components/ArticleFeedCard'
+import { PageFanLoader } from '@/components/motion/PageFanLoader'
+import { EmptyState } from '@/components/motion/EmptyState'
+import { Button } from '@/components/ui/button'
 import { useP2PArticles } from '@/hooks/use-p2p-articles'
 import { coverImageUrl } from '@/lib/p2p/articles'
 
@@ -44,12 +47,21 @@ export default function ArticlesPageClient() {
 
       <div className="mt-4 w-full max-w-[430px] overflow-hidden rounded-2xl border bg-black sm:mt-6">
         {loading ? (
-          <div className="h-[75vh] p-5">
-            <Skeleton className="h-full w-full rounded-xl bg-white/10" />
+          <div className="flex h-[75vh] items-center justify-center">
+            <PageFanLoader label="Fetching articles from peers…" />
           </div>
         ) : articles.length === 0 ? (
-          <div className="flex h-[40vh] items-center justify-center text-white/60">
-            No articles yet.
+          <div className="flex h-[40vh] items-center justify-center">
+            <EmptyState
+              className="text-white"
+              title={category ? `Nothing in ${category} yet` : 'Nothing published yet'}
+              description="Be the first to publish — your wallet signs the article."
+              action={
+                <Button size="sm" asChild>
+                  <Link href="/admin/articles/new">Write an article</Link>
+                </Button>
+              }
+            />
           </div>
         ) : (
           <div

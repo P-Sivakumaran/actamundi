@@ -19,6 +19,7 @@ import { useP2PArticles, type ArticleFilters } from '@/hooks/use-p2p-articles'
 import { useWalletAddress } from '@/hooks/use-wallet-address'
 import { coverImageUrl } from '@/lib/p2p/articles'
 import { ModerationBadge } from '@/components/ModerationBadge'
+import { WalletCoin } from '@/components/motion/WalletCoin'
 import { fallbackGradient } from '@/lib/utils'
 
 export default function ArticlesPageClient() {
@@ -32,6 +33,7 @@ export default function ArticlesPageClient() {
   if (!address) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <WalletCoin state={connecting ? 'connecting' : 'disconnected'} showLabel={false} />
         <p className="text-muted-foreground">Connect your wallet to manage your articles.</p>
         <Button onClick={() => connect()} disabled={connecting}>
           {connecting ? 'Connecting...' : 'Connect Wallet'}

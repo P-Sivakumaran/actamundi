@@ -27,20 +27,27 @@ module.exports = {
     },
   	extend: {
   		fontFamily: {
-  			serif: [
+  			display: [
   				'var(--font-bodoni-moda)',
   				'Bodoni Moda',
   				'Georgia',
   				'serif'
   			],
+  			serif: [
+  				'var(--font-newsreader)',
+  				'Newsreader',
+  				'Georgia',
+  				'serif'
+  			],
   			sans: [
-  				'var(--font-lato)',
-  				'Lato',
+  				'var(--font-instrument-sans)',
+  				'Instrument Sans',
   				'system-ui',
   				'sans-serif'
   			],
   			mono: [
   				'var(--font-mono)',
+  				'JetBrains Mono',
   				'ui-monospace',
   				'SFMono-Regular',
   				'Menlo',
@@ -184,23 +191,26 @@ module.exports = {
   					},
   					h1: {
   						color: 'hsl(var(--foreground))',
-  						fontFamily: 'var(--font-bodoni-moda), Bodoni Moda, Georgia, serif',
+  						fontFamily: 'var(--font-newsreader), Newsreader, Georgia, serif',
   						fontWeight: '700',
   					},
   					h2: {
   						color: 'hsl(var(--foreground))',
-  						fontFamily: 'var(--font-bodoni-moda), Bodoni Moda, Georgia, serif',
+  						fontFamily: 'var(--font-newsreader), Newsreader, Georgia, serif',
   						fontWeight: '600',
   					},
   					h3: {
   						color: 'hsl(var(--foreground))',
-  						fontFamily: 'var(--font-bodoni-moda), Bodoni Moda, Georgia, serif',
+  						fontFamily: 'var(--font-newsreader), Newsreader, Georgia, serif',
   						fontWeight: '600',
   					},
   					h4: {
   						color: 'hsl(var(--foreground))',
-  						fontFamily: 'var(--font-bodoni-moda), Bodoni Moda, Georgia, serif',
+  						fontFamily: 'var(--font-newsreader), Newsreader, Georgia, serif',
   						fontWeight: '600',
+  					},
+  					p: {
+  						fontFamily: 'var(--font-newsreader), Newsreader, Georgia, serif',
   					},
   					blockquote: {
   						borderLeftColor: 'hsl(var(--accent))',

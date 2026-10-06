@@ -34,6 +34,8 @@
   ],
   "exclude": [
     "node_modules",
-    "contracts"
+    "contracts",
+    "figma-make-preview",
+    "actamundi-3d-motion"
   ]
 }

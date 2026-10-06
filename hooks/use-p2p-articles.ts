@@ -52,6 +52,13 @@ export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions =
   const [moderationStatus, setModerationStatus] = useState<Map<string, ModerationAction>>(new Map())
   const [moderationReady, setModerationReady] = useState(false)
   const [moderationError, setModerationError] = useState<string | null>(null)
+  // A card that goes straight from visible to gone never gets to play the
+  // delisted tilt-and-dim (see ArticleFeedCard's am-delisted class) — give
+  // it one motion cycle on screen before the feed drops it for real.
+  const DELIST_GRACE_MS = 600
+  const delistGraceUntil = useRef<Map<string, number>>(new Map())
+  const prevModeration = useRef<Map<string, ModerationAction>>(new Map())
+  const [, bumpTick] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -63,6 +70,13 @@ export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions =
     }
     subscribeToModeration((next) => {
       if (cancelled) return
+      next.forEach((action, cid) => {
+        if (action.action === 'delist' && prevModeration.current.get(cid)?.action !== 'delist') {
+          delistGraceUntil.current.set(cid, Date.now() + DELIST_GRACE_MS)
+          setTimeout(() => { if (!cancelled) bumpTick((t) => t + 1) }, DELIST_GRACE_MS + 50)
+        }
+      })
+      prevModeration.current = next
       setModerationStatus(next)
       setModerationReady(true)
       setModerationError(null)
@@ -77,10 +91,16 @@ export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions =
     (cid: string) => moderationStatus.get(cid)?.action === 'delist',
     [moderationStatus]
   )
+  const inDelistGrace = useCallback(
+    (cid: string) => (delistGraceUntil.current.get(cid) ?? 0) > Date.now(),
+    []
+  )
 
   // Hide the served index until its local moderation snapshot is checked.
   // Keep the underlying article map so a later endorsement restores visibility.
-  const visibleArticles = moderationReady ? articles.filter((a) => !isDelisted(a.cid)) : []
+  const visibleArticles = moderationReady
+    ? articles.filter((a) => !isDelisted(a.cid) || inDelistGrace(a.cid))
+    : []
 
   const applyArticle = useCallback((article: P2PArticle) => {
     const key = feedKey(article)
@@ -189,7 +209,7 @@ export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions =
   const filterArticles = useCallback(
     (filters: ArticleFilters): P2PArticle[] => {
       return articles.filter((a) => {
-        if (!moderationReady || isDelisted(a.cid)) return false
+        if (!moderationReady || (isDelisted(a.cid) && !inDelistGrace(a.cid))) return false
         if (a.tombstone) return false
         if (filters.status && a.status !== filters.status) return false
         if (filters.category && a.category !== filters.category) return false
@@ -199,7 +219,7 @@ export function useP2PArticles({ authorAddr, category }: UseP2PArticlesOptions =
         return true
       })
     },
-    [articles, moderationReady, isDelisted]
+    [articles, moderationReady, isDelisted, inDelistGrace]
   )
 
   const categories = Array.from(

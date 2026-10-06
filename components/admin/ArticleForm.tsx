@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArticleFeedCard } from '@/components/ArticleFeedCard'
+import { LedgerDrop, type PublishState } from '@/components/motion/LedgerDrop'
 import { PenLine } from 'lucide-react'
 import Image from 'next/image'
 import type { P2PArticle } from '@/models/P2PArticle'
@@ -33,6 +34,8 @@ interface ArticleFormProps {
   submitLabel: string
   savingLabel: string
   saving: boolean
+  /** Drives the ledger-drop motion in the preview pane; omit for forms with no publish animation. */
+  publishState?: PublishState
   error: string | null
   onSubmit: (values: ArticleFormSubmitValues) => void
   onCancel: () => void
@@ -42,7 +45,7 @@ interface ArticleFormProps {
  * same live preview, different initial values and submit behavior. */
 export function ArticleForm({
   heading, initialValues, initialImagePreview, authorAddr,
-  submitLabel, savingLabel, saving, error, onSubmit, onCancel,
+  submitLabel, savingLabel, saving, publishState = 'idle', error, onSubmit, onCancel,
 }: ArticleFormProps) {
   const [title, setTitle] = useState(initialValues?.title ?? '')
   const [excerpt, setExcerpt] = useState(initialValues?.excerpt ?? '')
@@ -170,16 +173,22 @@ export function ArticleForm({
           <div className="sticky top-6 space-y-2">
             <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <PenLine className="h-3.5 w-3.5" />
-              Live preview — what readers will see
+              {publishState === 'idle' ? 'Live preview — what readers will see' : 'Publishing'}
             </p>
-            <div className="h-[560px] w-full overflow-hidden rounded-2xl border bg-black">
-              <ArticleFeedCard
-                article={previewArticle}
-                coverImageUrl={imagePreview ?? undefined}
-                moderation={undefined}
-                linkToArticle={false}
-              />
-            </div>
+            {publishState === 'idle' ? (
+              <div className="h-[560px] w-full overflow-hidden rounded-2xl border bg-black">
+                <ArticleFeedCard
+                  article={previewArticle}
+                  coverImageUrl={imagePreview ?? undefined}
+                  moderation={undefined}
+                  linkToArticle={false}
+                />
+              </div>
+            ) : (
+              <div className="flex h-[560px] w-full items-center justify-center overflow-hidden rounded-2xl border">
+                <LedgerDrop state={publishState} />
+              </div>
+            )}
           </div>
         </div>
       </div>

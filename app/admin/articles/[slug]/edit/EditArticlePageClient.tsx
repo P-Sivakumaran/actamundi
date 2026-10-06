@@ -8,7 +8,9 @@ import { useP2PArticles } from '@/hooks/use-p2p-articles'
 import { useWalletAddress } from '@/hooks/use-wallet-address'
 import { publishBlob, coverImageUrl } from '@/lib/p2p/articles'
 import { ArticleForm, type ArticleFormSubmitValues } from '@/components/admin/ArticleForm'
+import { WalletCoin } from '@/components/motion/WalletCoin'
 import type { P2PArticle, P2PArticleInput } from '@/models/P2PArticle'
+import type { PublishState } from '@/components/motion/LedgerDrop'
 
 function estimateReadingTime(html: string): number {
   const wordCount = html.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length
@@ -24,6 +26,7 @@ export default function EditArticlePageClient({ params }: { params: { slug: stri
   const [original, setOriginal] = useState<P2PArticle | null>(null)
   const [newerAvailable, setNewerAvailable] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [publishState, setPublishState] = useState<PublishState>('idle')
   const [error, setError] = useState<string | null>(null)
 
   // Pinned once: ArticleForm captures its own field state from
@@ -47,6 +50,7 @@ export default function EditArticlePageClient({ params }: { params: { slug: stri
     if (!original) return
 
     setSaving(true)
+    setPublishState('signing')
     setError(null)
 
     try {
@@ -71,12 +75,15 @@ export default function EditArticlePageClient({ params }: { params: { slug: stri
       }
 
       await publishArticle(input)
+      setPublishState('signed')
 
       toast({ title: 'Success', description: 'Article updated successfully' })
+      await new Promise((resolve) => setTimeout(resolve, 700))
       router.push('/admin/articles')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update article'
       setError(message)
+      setPublishState('idle')
       toast({ title: 'Error', description: message, variant: 'destructive' })
     } finally {
       setSaving(false)
@@ -86,6 +93,7 @@ export default function EditArticlePageClient({ params }: { params: { slug: stri
   if (!address) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <WalletCoin state={connecting ? 'connecting' : 'disconnected'} showLabel={false} />
         <p className="text-muted-foreground">Connect your wallet to edit articles.</p>
         <Button onClick={() => connect()} disabled={connecting}>
           {connecting ? 'Connecting...' : 'Connect Wallet'}
@@ -126,6 +134,7 @@ export default function EditArticlePageClient({ params }: { params: { slug: stri
         submitLabel="Save Changes"
         savingLabel="Saving..."
         saving={saving}
+        publishState={publishState}
         error={error}
         onSubmit={handleSubmit}
         onCancel={() => router.push('/admin/articles')}
