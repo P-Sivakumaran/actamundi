@@ -9,6 +9,7 @@ import { useWalletAddress } from '@/hooks/use-wallet-address'
 import { publishBlob, coverImageUrl } from '@/lib/p2p/articles'
 import { ArticleForm, type ArticleFormSubmitValues } from '@/components/admin/ArticleForm'
 import { WalletCoin } from '@/components/motion/WalletCoin'
+import { Spinner } from '@/components/ui/spinner'
 import type { P2PArticle, P2PArticleInput } from '@/models/P2PArticle'
 import type { PublishState } from '@/components/motion/LedgerDrop'
 
@@ -105,7 +106,7 @@ export default function EditArticlePageClient({ params }: { params: { slug: stri
   if (loading || !original) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <Spinner />
       </div>
     )
   }

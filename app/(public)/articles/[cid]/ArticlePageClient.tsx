@@ -5,12 +5,15 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import DOMPurify from 'dompurify'
-import { Clock, History, ShieldQuestion, AlertCircle } from 'lucide-react'
+import { Clock, History, ShieldQuestion, AlertCircle, MessageSquare } from 'lucide-react'
 import { fetchArticleByCid, coverImageUrl } from '@/lib/p2p/articles'
 import { fetchModerationLog, subscribeToModeration, type ModerationAction } from '@/lib/p2p/moderation'
 import { ModerationBadge } from '@/components/ModerationBadge'
 import { SignatureFlip } from '@/components/motion/SignatureFlip'
 import { SupportWriter } from '@/components/SupportWriter'
+import { ModerationActions } from '@/components/ModerationActions'
+import { CommentThread } from '@/components/CommentThread'
+import { Spinner } from '@/components/ui/spinner'
 import { truncateAddress, fallbackGradient } from '@/lib/utils'
 import type { P2PArticle } from '@/models/P2PArticle'
 
@@ -111,8 +114,19 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
   // article.content is peer-supplied HTML (TipTap output replicated over p2p);
   // sanitize before dangerouslySetInnerHTML so a malicious peer can't inject
   // scripts — a valid signature only proves authorship, not safe markup.
+  // video/audio/source/controls/data-cid explicitly allowed for the inline
+  // media embeds RichTextEditor's video/audio-extension.ts produce, plus
+  // download/data-filename/data-size for attachment-extension.ts's generic
+  // file-download cards — not relying on whatever DOMPurify's default tag
+  // list happens to include.
   const sanitizedContent = useMemo(
-    () => (article ? DOMPurify.sanitize(article.content) : ''),
+    () =>
+      article
+        ? DOMPurify.sanitize(article.content, {
+            ADD_TAGS: ['video', 'audio', 'source'],
+            ADD_ATTR: ['controls', 'data-cid', 'download', 'data-filename', 'data-size'],
+          })
+        : '',
     [article]
   )
 
@@ -121,7 +135,7 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
   if (!article) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
+        <Spinner />
       </div>
     )
   }
@@ -151,6 +165,9 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
         <h1 className="mb-3 text-3xl font-bold text-foreground sm:text-4xl">{article.title}</h1>
         {article.excerpt && <p className="mb-4 text-lg text-muted-foreground">{article.excerpt}</p>}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+          <Link href={`/profile/${article.authorAddr}`} className="font-mono text-xs hover:text-foreground hover:underline">
+            {truncateAddress(article.authorAddr)}
+          </Link>
           <span>{new Date(article.createdAt).toLocaleDateString()}</span>
           {article.readingTime > 0 && (
             <span className="inline-flex items-center gap-1">
@@ -167,6 +184,12 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
       <SignatureFlip address={article.authorAddr} status="verified" className="mb-6" />
 
       <SupportWriter writerAddr={article.authorAddr} className="mb-6" />
+
+      <ModerationActions
+        targetCid={article.cid}
+        article={{ title: article.title, excerpt: article.excerpt, content: article.content }}
+        className="mb-6"
+      />
 
       <div className="mb-8 flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 px-4 py-3 text-sm">
         {moderationState === 'loading' && (
@@ -252,6 +275,14 @@ export default function ArticlePageClient({ params }: { params: { cid: string } 
             </ol>
           )
         )}
+      </section>
+
+      <section id="comments" className="mt-12 scroll-mt-20 border-t pt-6">
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+          <MessageSquare className="h-4 w-4" />
+          Comments
+        </h2>
+        <CommentThread articleCid={article.cid} />
       </section>
     </article>
   )

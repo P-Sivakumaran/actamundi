@@ -1,8 +1,9 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { ChevronDown } from 'lucide-react'
 import ArticleSearch from '@/components/ArticleSearch'
 import { ArticleFeedCard } from '@/components/ArticleFeedCard'
 import { PageFanLoader } from '@/components/motion/PageFanLoader'
@@ -32,6 +33,7 @@ export default function ArticlesPageClient() {
 
   const { loading, error, categories, filterArticles, moderationStatus } = useP2PArticles({ category })
   const articles = filterArticles({ status: 'published', category, search: q })
+  const [hasScrolled, setHasScrolled] = useState(false)
 
   return (
     <div className="flex flex-col items-center">
@@ -58,26 +60,37 @@ export default function ArticlesPageClient() {
               description="Be the first to publish — your wallet signs the article."
               action={
                 <Button size="sm" asChild>
-                  <Link href="/admin/articles/new">Write an article</Link>
+                  <Link href="/admin/articles/new">Upload</Link>
                 </Button>
               }
             />
           </div>
         ) : (
-          <div
-            className="h-[75vh] overflow-y-scroll snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
-            style={{ scrollbarWidth: 'none' }}
-          >
-            {articles.map((article, i) => (
-              <div key={article.cid} className="relative h-full w-full">
-                <ArticleFeedCard
-                  article={article}
-                  coverImageUrl={coverImageUrl(article.coverImageCid)}
-                  moderation={moderationStatus.get(article.cid)}
-                  priority={i === 0}
-                />
+          <div className="relative">
+            <div
+              className="h-[75vh] overflow-y-scroll snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
+              style={{ scrollbarWidth: 'none' }}
+              onScroll={() => !hasScrolled && setHasScrolled(true)}
+            >
+              {articles.map((article, i) => (
+                <div key={article.cid} className="relative h-full w-full">
+                  <ArticleFeedCard
+                    article={article}
+                    coverImageUrl={coverImageUrl(article.coverImageCid)}
+                    moderation={moderationStatus.get(article.cid)}
+                    priority={i === 0}
+                  />
+                </div>
+              ))}
+            </div>
+            {/* Scrollbar is intentionally hidden for the full-bleed feed
+             * look — without any hint, desktop visitors have no way to
+             * discover there's more content below the fold. */}
+            {!hasScrolled && articles.length > 1 && (
+              <div className="pointer-events-none absolute bottom-4 left-1/2 z-10 -translate-x-1/2 animate-bounce text-white/80">
+                <ChevronDown className="h-6 w-6 drop-shadow" />
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>

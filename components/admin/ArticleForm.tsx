@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArticleFeedCard } from '@/components/ArticleFeedCard'
 import { LedgerDrop, type PublishState } from '@/components/motion/LedgerDrop'
-import { PenLine } from 'lucide-react'
+import { PenLine, Sparkles } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 import type { P2PArticle } from '@/models/P2PArticle'
 
 export interface ArticleFormValues {
@@ -54,6 +55,37 @@ export function ArticleForm({
   const [status, setStatus] = useState<'draft' | 'published'>(initialValues?.status ?? 'draft')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(initialImagePreview ?? null)
+  const [suggesting, setSuggesting] = useState(false)
+  const [suggestError, setSuggestError] = useState<string | null>(null)
+  const [aiLikelihood, setAiLikelihood] = useState<{
+    score: number
+    confidence: number
+    legend: Record<string, string>
+  } | null>(null)
+
+  async function handleSuggestCategory() {
+    if (!title.trim()) {
+      setSuggestError('Add a title first')
+      return
+    }
+    setSuggesting(true)
+    setSuggestError(null)
+    try {
+      const res = await fetch('/api/articles/suggest-category', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, excerpt, content }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Suggestion failed')
+      setCategory(data.category) // advisory only — still a plain, editable Input below
+      setAiLikelihood(data.aiLikelihood ?? null)
+    } catch (err) {
+      setSuggestError(err instanceof Error ? err.message : 'Suggestion failed')
+    } finally {
+      setSuggesting(false)
+    }
+  }
 
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -80,6 +112,13 @@ export function ArticleForm({
 
   return (
     <div className="container mx-auto py-8">
+      <nav className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground" aria-label="Breadcrumb">
+        <Link href="/admin" className="hover:text-foreground transition-colors">Admin</Link>
+        <span>/</span>
+        <Link href="/admin/articles" className="hover:text-foreground transition-colors">Articles</Link>
+        <span>/</span>
+        <span className="text-foreground">{heading}</span>
+      </nav>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{heading}</h1>
         <Button variant="outline" onClick={onCancel}>
@@ -139,7 +178,32 @@ export function ArticleForm({
 
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
-                <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} />
+                <div className="flex gap-2">
+                  <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} className="flex-1" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={suggesting}
+                    onClick={handleSuggestCategory}
+                  >
+                    <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                    {suggesting ? 'Thinking…' : 'Suggest'}
+                  </Button>
+                </div>
+                {suggestError && <p className="text-xs text-destructive">{suggestError}</p>}
+                {aiLikelihood && (
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+                    <span className="font-medium">AI-likelihood check (advisory only):</span>{' '}
+                    {aiLikelihood.legend[String(Math.round(aiLikelihood.score))]}
+                    <span className="text-amber-700/80 dark:text-amber-400/80">
+                      {' '}({aiLikelihood.score.toFixed(1)}/4, confidence {Math.round(aiLikelihood.confidence * 100)}%)
+                    </span>
+                    <p className="mt-1 text-amber-700/80 dark:text-amber-400/80">
+                      Not reliable enough to act on alone — a self-check for you, not a gate on publishing.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -173,10 +237,14 @@ export function ArticleForm({
           <div className="sticky top-6 space-y-2">
             <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <PenLine className="h-3.5 w-3.5" />
-              {publishState === 'idle' ? 'Live preview — what readers will see' : 'Publishing'}
+              {publishState === 'idle' ? 'Preview' : 'Publishing'}
             </p>
             {publishState === 'idle' ? (
-              <div className="h-[560px] w-full overflow-hidden rounded-2xl border bg-black">
+              // aspect-[9/16]: this is a preview of a phone screen, so a
+              // portrait phone aspect ratio — not an arbitrary 560px that
+              // happened to look OK at this sidebar's current 320px width
+              // and would look wrong at any other width.
+              <div className="aspect-[9/16] w-full overflow-hidden rounded-2xl border bg-black">
                 <ArticleFeedCard
                   article={previewArticle}
                   coverImageUrl={imagePreview ?? undefined}
@@ -185,7 +253,7 @@ export function ArticleForm({
                 />
               </div>
             ) : (
-              <div className="flex h-[560px] w-full items-center justify-center overflow-hidden rounded-2xl border">
+              <div className="flex aspect-[9/16] w-full items-center justify-center overflow-hidden rounded-2xl border">
                 <LedgerDrop state={publishState} />
               </div>
             )}

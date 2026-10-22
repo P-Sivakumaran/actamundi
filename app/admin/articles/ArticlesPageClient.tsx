@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -14,13 +15,20 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { format } from 'date-fns'
 import { useP2PArticles, type ArticleFilters } from '@/hooks/use-p2p-articles'
 import { useWalletAddress } from '@/hooks/use-wallet-address'
 import { coverImageUrl } from '@/lib/p2p/articles'
 import { ModerationBadge } from '@/components/ModerationBadge'
 import { WalletCoin } from '@/components/motion/WalletCoin'
+import { EmptyState } from '@/components/motion/EmptyState'
+import { Spinner } from '@/components/ui/spinner'
 import { fallbackGradient } from '@/lib/utils'
+import type { P2PArticle } from '@/models/P2PArticle'
 
 export default function ArticlesPageClient() {
   const router = useRouter()
@@ -29,6 +37,7 @@ export default function ArticlesPageClient() {
     authorAddr: address ?? undefined,
   })
   const [filters, setFilters] = useState<ArticleFilters>({})
+  const [pendingDelete, setPendingDelete] = useState<P2PArticle | null>(null)
 
   if (!address) {
     return (
@@ -45,20 +54,26 @@ export default function ArticlesPageClient() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <Spinner />
       </div>
     )
   }
 
-  async function handleDelete(slug: string) {
-    if (!confirm('Are you sure you want to delete this article?')) return
-    await deleteArticle(slug)
+  async function confirmDelete() {
+    if (!pendingDelete) return
+    await deleteArticle(pendingDelete.slug)
+    setPendingDelete(null)
   }
 
   const visibleArticles = filterArticles(filters)
 
   return (
     <div className="container mx-auto py-8 space-y-6">
+      <nav className="flex items-center gap-1.5 text-xs text-muted-foreground" aria-label="Breadcrumb">
+        <Link href="/admin" className="hover:text-foreground transition-colors">Admin</Link>
+        <span>/</span>
+        <span className="text-foreground">Articles</span>
+      </nav>
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold">Articles</h1>
         <Button onClick={() => router.push('/admin/articles/new')}>
@@ -80,6 +95,19 @@ export default function ArticlesPageClient() {
         className="max-w-sm"
       />
 
+      {visibleArticles.length === 0 ? (
+        <EmptyState
+          title={filters.search ? 'No articles match your search' : 'No articles yet'}
+          description={filters.search ? 'Try a different search term.' : 'Create your first article to see it here.'}
+          action={
+            !filters.search && (
+              <Button size="sm" onClick={() => router.push('/admin/articles/new')}>
+                New Article
+              </Button>
+            )
+          }
+        />
+      ) : (
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -141,7 +169,7 @@ export default function ArticlesPageClient() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleDelete(article.slug)}
+                      onClick={() => setPendingDelete(article)}
                     >
                       Delete
                     </Button>
@@ -153,6 +181,25 @@ export default function ArticlesPageClient() {
           </TableBody>
         </Table>
       </div>
+      )}
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete &quot;{pendingDelete?.title}&quot;?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This publishes a tombstone version — the article disappears from feeds, but the
+              signed history stays on the log for auditing. This can&apos;t be undone from here.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

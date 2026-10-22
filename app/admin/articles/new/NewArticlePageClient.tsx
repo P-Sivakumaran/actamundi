@@ -91,7 +91,7 @@ export default function NewArticlePageClient() {
     <ArticleForm
       heading="New Article"
       authorAddr={address}
-      submitLabel="Create Article"
+      submitLabel="Publish"
       savingLabel="Publishing..."
       saving={saving}
       publishState={publishState}

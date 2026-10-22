@@ -55,7 +55,9 @@ export function ArticleFeedCard({
           <p className="mt-2 text-sm text-white/80 line-clamp-2">{article.excerpt}</p>
         )}
         <div className="mt-3 flex items-center gap-3 text-xs text-white/70">
-          <span>{truncateAddress(article.authorAddr)}</span>
+          <Link href={`/profile/${article.authorAddr}`} className="relative z-10 hover:text-white hover:underline">
+            {truncateAddress(article.authorAddr)}
+          </Link>
           <span>{new Date(article.createdAt).toLocaleDateString()}</span>
           {article.readingTime > 0 && (
             <span className="inline-flex items-center gap-0.5">
@@ -74,13 +76,22 @@ export function ArticleFeedCard({
     delisted ? 'am-delisted' : 'am-listed'
   )
 
-  if (!linkToArticle) {
-    return <div className={className}>{content}</div>
-  }
-
+  // The author name below is its own <Link> — nesting it inside a card-wide
+  // <Link> would mean nested <a> tags, which is invalid HTML and breaks
+  // click targeting unpredictably. Instead: an invisible full-cover Link
+  // painted first (z-0), with real content — including the author link —
+  // stacked above it, so clicks anywhere else on the card still navigate
+  // to the article while the author name captures its own clicks.
   return (
-    <Link href={`/articles/${article.cid}`} aria-label={`Read article: ${article.title}`} className={className}>
+    <div className={className}>
+      {linkToArticle && (
+        <Link
+          href={`/articles/${article.cid}`}
+          aria-label={`Read article: ${article.title}`}
+          className="absolute inset-0 z-0"
+        />
+      )}
       {content}
-    </Link>
+    </div>
   )
 }
