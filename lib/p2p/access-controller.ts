@@ -64,3 +64,39 @@ export const BoardAccessController = (policy: BoardPolicy) => {
 }
 
 BoardAccessController.type = boardType
+
+const selfSignedType = 'actamundi-self-signed-v1'
+
+/** Open-membership access controller: any wallet may append an entry, as
+ * long as it passes the caller-supplied `verify` predicate (self-signature,
+ * schema, domain-specific invariants — e.g. rejecting a self-follow).
+ * Unlike AuthorAccessController (one fixed address) or BoardAccessController
+ * (one fixed allowlist), follow and comments both need "anyone may write
+ * their own signed entry," not a fixed writer set. The controller itself
+ * stays generic — it doesn't know whether the entry's self-claimed identity
+ * field is called `followerAddr` or `authorAddr`; that's entirely the
+ * verify predicate's job, the same way BoardAccessController delegates to
+ * verifyModerationAction rather than inlining its checks here. */
+export const SelfSignedAccessController = (
+  { domain, scope, verify }: { domain: string; scope?: string; verify: (doc: unknown) => boolean }
+) =>
+  async () => {
+    // scope omitted (not set to undefined) when absent — DAG-CBOR rejects
+    // `undefined`-valued keys outright, same constraint articles.ts's
+    // stripUndefined() works around for stored entries.
+    const { cid } = await Block.encode({
+      value: scope === undefined
+        ? { type: selfSignedType, domain }
+        : { type: selfSignedType, domain, scope },
+      codec: dagCbor,
+      hasher: sha256,
+    })
+    return {
+      type: selfSignedType,
+      address: `/${selfSignedType}/${cid.toString(base58btc)}`,
+      canAppend: async (entry: { payload?: { op?: string; value?: unknown } }): Promise<boolean> =>
+        entry.payload?.op === 'ADD' && verify(entry.payload.value),
+    }
+  }
+
+SelfSignedAccessController.type = selfSignedType

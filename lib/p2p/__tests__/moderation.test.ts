@@ -9,7 +9,8 @@ import { BoardAccessController, AuthorAccessController } from '../access-control
 import { signableBody, verifyArticleSignatureFor } from '../signing'
 import {
   moderationSignableBody, verifyModerationAction, activeDelistedCids,
-  normalizeBoardPolicy, type ModerationAction,
+  normalizeBoardPolicy, commentModerationTarget, parseCommentModerationTarget,
+  activeCommentModerationByArticle, type ModerationAction,
 } from '../moderation-policy'
 import { publishModerationAction, createModerationClient } from '../moderation'
 
@@ -212,4 +213,63 @@ test('subscriptions load initial state, refresh on replicated updates, recover e
   await settle()
   assert.equal(store.events.listenerCount('update'), 0)
   assert.equal(states.length, count)
+})
+
+// --- Comment moderation (commentModerationTarget composite cid) ---
+
+test('commentModerationTarget round-trips through parseCommentModerationTarget', () => {
+  const target = commentModerationTarget('bafy-article', 'comment-uuid-1')
+  assert.equal(target, 'comment:bafy-article:comment-uuid-1')
+  assert.deepEqual(parseCommentModerationTarget(target), { articleCid: 'bafy-article', commentId: 'comment-uuid-1' })
+})
+
+test('rejects malformed comment-target strings', () => {
+  for (const value of ['comment:', 'comment:only-article', 'comment::missing-article', 'not-a-comment-target']) {
+    assert.equal(parseCommentModerationTarget(value), null)
+  }
+})
+
+test('verifyModerationAction accepts a real CID or a well-formed comment-target, nothing else', async () => {
+  const articleCid = (await signed()).cid
+  const asArticle = await signed({ cid: articleCid })
+  assert.equal(verifyModerationAction(asArticle, policy), true)
+
+  const commentTarget = commentModerationTarget(articleCid, 'comment-uuid-1')
+  const asComment = await signed({ cid: commentTarget })
+  assert.equal(verifyModerationAction(asComment, policy), true)
+
+  const malformed = await signed({ cid: 'comment:not-even-close' })
+  assert.equal(verifyModerationAction(malformed, policy), false)
+
+  const plainGarbage = await signed({ cid: 'definitely-not-a-cid' })
+  assert.equal(verifyModerationAction(plainGarbage, policy), false)
+})
+
+test('activeCommentModerationByArticle scopes to one article and keys by commentId, ignoring article-level entries', async () => {
+  const articleCid = (await signed()).cid
+  const otherArticleCid = CID.createV1(0x55, await sha256.digest(new TextEncoder().encode('other'))).toString()
+
+  const commentA = await signed({ cid: commentModerationTarget(articleCid, 'comment-a'), action: 'flag' })
+  const commentB = await signed({ cid: commentModerationTarget(articleCid, 'comment-b'), action: 'delist' })
+  const commentOnOtherArticle = await signed({ cid: commentModerationTarget(otherArticleCid, 'comment-c'), action: 'flag' })
+  const articleLevel = await signed({ cid: articleCid, action: 'endorse' })
+
+  const result = activeCommentModerationByArticle(
+    [commentA, commentB, commentOnOtherArticle, articleLevel], policy, articleCid
+  )
+
+  assert.equal(result.size, 2)
+  assert.equal(result.get('comment-a')?.action, 'flag')
+  assert.equal(result.get('comment-b')?.action, 'delist')
+  assert.equal(result.has('comment-c'), false)
+})
+
+test('comment-target entries respect the same latest-wins reduction as article entries', async () => {
+  const articleCid = (await signed()).cid
+  const target = commentModerationTarget(articleCid, 'comment-a')
+  const flag = await signed({ cid: target, action: 'flag', timestamp: '2026-10-01T00:00:00.000Z' })
+  const laterEndorse = await signed({ cid: target, action: 'endorse', timestamp: '2026-10-02T00:00:00.000Z' }, boardB)
+
+  const result = activeCommentModerationByArticle([flag, laterEndorse], policy, articleCid)
+  assert.equal(result.get('comment-a')?.action, 'endorse')
 })

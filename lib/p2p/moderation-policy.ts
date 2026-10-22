@@ -19,6 +19,31 @@ export interface ModerationAction {
 export type ModerationInput = Pick<ModerationAction, 'cid' | 'action' | 'reason'>
 export const MODERATION_DOMAIN = 'actamundi.moderation.v1'
 
+const COMMENT_TARGET_PREFIX = 'comment:'
+
+/** A moderation action's `cid` field normally holds a real article CID.
+ * Comments don't have one (they're identified by a client-minted UUID, see
+ * models/P2PComment.ts) — rather than restructuring ModerationAction into a
+ * tagged union (which would cascade through every `moderationStatus.get(cid)`
+ * call site treating `cid` as an opaque string key), comments are targeted
+ * by this composite string instead. Every existing reader keeps working
+ * unchanged; only verifyModerationAction's validation needs to recognize
+ * the second shape. */
+export function commentModerationTarget(articleCid: string, commentId: string): string {
+  return `${COMMENT_TARGET_PREFIX}${articleCid}:${commentId}`
+}
+
+export function parseCommentModerationTarget(cid: string): { articleCid: string; commentId: string } | null {
+  if (!cid.startsWith(COMMENT_TARGET_PREFIX)) return null
+  const rest = cid.slice(COMMENT_TARGET_PREFIX.length)
+  const sep = rest.indexOf(':')
+  if (sep < 0) return null
+  const articleCid = rest.slice(0, sep)
+  const commentId = rest.slice(sep + 1)
+  if (!articleCid || !commentId) return null
+  return { articleCid, commentId }
+}
+
 export function normalizeBoardPolicy(policy: BoardPolicy): BoardPolicy {
   if (policy.threshold !== 1) throw new Error('Only threshold=1 is supported')
   if (!Array.isArray(policy.boardAddrs) || policy.boardAddrs.length === 0) {
@@ -54,7 +79,11 @@ export function verifyModerationAction(value: unknown, policy: BoardPolicy): val
     const doc = value as Record<string, unknown>
     const keys = ['cid', 'action', 'boardAddr', 'signature', 'reason', 'timestamp']
     if (Object.keys(doc).some((key) => !keys.includes(key))) return false
-    if (typeof doc.cid !== 'string' || CID.parse(doc.cid).toString() !== doc.cid) return false
+    if (typeof doc.cid !== 'string') return false
+    const isRealCid = (() => {
+      try { return CID.parse(doc.cid as string).toString() === doc.cid } catch { return false }
+    })()
+    if (!isRealCid && !parseCommentModerationTarget(doc.cid)) return false
     if (!['endorse', 'flag', 'delist'].includes(doc.action as string)) return false
     if (typeof doc.boardAddr !== 'string' || typeof doc.signature !== 'string') return false
     if (typeof doc.timestamp !== 'string' || new Date(doc.timestamp).toISOString() !== doc.timestamp) return false
@@ -95,6 +124,23 @@ export function activeModerationByCid(values: unknown[], policy: BoardPolicy): M
     if (!previous || compareModerationActions(previous, value) < 0) latest.set(value.cid, value)
   }
   return latest
+}
+
+/** Same reduction as activeModerationByCid, re-keyed to commentId and
+ * scoped to one article — the shared basis for CommentThread.tsx's
+ * delisted-filter and per-comment ModerationBadge. */
+export function activeCommentModerationByArticle(
+  values: unknown[],
+  policy: BoardPolicy,
+  articleCid: string
+): Map<string, ModerationAction> {
+  const byCid = activeModerationByCid(values, policy)
+  const byCommentId = new Map<string, ModerationAction>()
+  byCid.forEach((action, cid) => {
+    const target = parseCommentModerationTarget(cid)
+    if (target && target.articleCid === articleCid) byCommentId.set(target.commentId, action)
+  })
+  return byCommentId
 }
 
 export function activeDelistedCids(values: unknown[], policy: BoardPolicy): Set<string> {

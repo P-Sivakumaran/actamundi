@@ -62,6 +62,32 @@ local read is not proof that all remote actions have replicated; offline peers
 can temporarily serve stale results. This phase adds no authoritative sync
 checkpoint or availability guarantee.
 
+## Comment moderation
+
+Comments (`lib/p2p/comments.ts`) are identified by a client-minted UUID, not
+a CID — they can't satisfy `CID.parse(cid).toString() === cid`. Rather than
+restructuring `ModerationAction` into a tagged union, a comment is targeted
+by a composite string instead of a real CID: `commentModerationTarget(articleCid,
+commentId)` produces `comment:<articleCid>:<commentId>`.
+`verifyModerationAction` accepts `cid` as *either* a real CID *or* a
+well-formed composite string — every existing reader that already treats
+`cid` as an opaque string key (feed filtering, `moderationStatus.get(cid)`,
+etc.) keeps working unchanged against the same single global log; only the
+validation branch changed.
+
+```ts
+await publishModerationAction(
+  { cid: commentModerationTarget(articleCid, commentId), action: 'delist' },
+  signer
+)
+const commentStatus = await fetchCommentModerationLog(articleCid) // Map<commentId, ModerationAction>
+```
+
+A delisted comment is filtered out of its thread entirely, replies included
+— comments have no direct-link bypass page the way a delisted article does,
+so there's no case where a hidden comment still needs to render accurately
+for a direct visitor.
+
 ## Governance boundary
 
 The fixed board policy is configured by the reader/application. Timelock role

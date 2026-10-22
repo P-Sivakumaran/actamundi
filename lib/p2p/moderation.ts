@@ -1,11 +1,12 @@
 import { BoardAccessController } from './access-controller'
 import {
   normalizeBoardPolicy, moderationSignableBody, verifyModerationAction,
-  activeModerationByCid, compareModerationActions, MODERATION_DOMAIN,
+  activeModerationByCid, activeCommentModerationByArticle, compareModerationActions, MODERATION_DOMAIN,
   type BoardPolicy, type ModerationAction, type ModerationInput,
 } from './moderation-policy'
 
 export type { BoardPolicy, ModerationAction, ModerationInput } from './moderation-policy'
+export { commentModerationTarget } from './moderation-policy'
 
 interface Signer {
   getAddress(): Promise<string>
@@ -19,6 +20,14 @@ export interface ModerationStore {
     on(event: 'update', callback: () => void): void
     off(event: 'update', callback: () => void): void
   }
+}
+
+/** Moderation is opt-in per deployment — an instance that never set up a
+ * board isn't misconfigured, it just doesn't have moderation yet. Readers
+ * shouldn't see env-var plumbing or lose the whole feed over it; callers use
+ * this to skip moderation reads entirely rather than racing getModerationPolicy(). */
+export function isModerationConfigured(): boolean {
+  return !!process.env.NEXT_PUBLIC_MODERATION_BOARD_ADDRS
 }
 
 export function getModerationPolicy(): BoardPolicy {
@@ -99,7 +108,40 @@ export function createModerationClient(policy: BoardPolicy, openStore: () => Pro
     return () => { stopped = true; db.events.off('update', refresh) }
   }
 
-  return { publishModerationAction, fetchModerationLog, subscribeToModeration }
+  /** Same reduction, scoped to one article's comments and keyed by commentId
+   * instead of cid — see activeCommentModerationByArticle. */
+  async function fetchCommentModerationLog(articleCid: string): Promise<Map<string, ModerationAction>> {
+    const policy = board
+    const entries = await (await openStore()).all()
+    return activeCommentModerationByArticle(entries.map((entry) => entry.value), policy, articleCid)
+  }
+
+  async function subscribeToCommentModeration(
+    articleCid: string,
+    onChange: (status: Map<string, ModerationAction>) => void,
+    onError: (error: unknown) => void
+  ): Promise<() => void> {
+    const policy = board
+    const db = await openStore()
+    let stopped = false
+    let pending = Promise.resolve()
+    const refresh = () => {
+      pending = pending.then(async () => {
+        if (stopped) return
+        const entries = await db.all()
+        const status = activeCommentModerationByArticle(entries.map((entry) => entry.value), policy, articleCid)
+        if (!stopped) onChange(status)
+      }).catch((error) => { if (!stopped) onError(error) })
+    }
+    db.events.on('update', refresh)
+    refresh()
+    return () => { stopped = true; db.events.off('update', refresh) }
+  }
+
+  return {
+    publishModerationAction, fetchModerationLog, subscribeToModeration,
+    fetchCommentModerationLog, subscribeToCommentModeration,
+  }
 }
 
 function configuredClient() {
@@ -111,12 +153,37 @@ export async function publishModerationAction(input: ModerationInput, signer: Si
 }
 
 export async function fetchModerationLog(cid: string): Promise<ModerationAction[]> {
+  if (!isModerationConfigured()) return []
   return configuredClient().fetchModerationLog(cid)
 }
 
+/** No-configured-board deployments resolve with an empty status map instead
+ * of rejecting — moderation is a trust signal layered on top of the feed,
+ * not a precondition for the feed existing. */
 export async function subscribeToModeration(
   onChange: (status: Map<string, ModerationAction>) => void,
   onError: (error: unknown) => void
 ): Promise<() => void> {
+  if (!isModerationConfigured()) {
+    onChange(new Map())
+    return () => {}
+  }
   return configuredClient().subscribeToModeration(onChange, onError)
+}
+
+export async function fetchCommentModerationLog(articleCid: string): Promise<Map<string, ModerationAction>> {
+  if (!isModerationConfigured()) return new Map()
+  return configuredClient().fetchCommentModerationLog(articleCid)
+}
+
+export async function subscribeToCommentModeration(
+  articleCid: string,
+  onChange: (status: Map<string, ModerationAction>) => void,
+  onError: (error: unknown) => void
+): Promise<() => void> {
+  if (!isModerationConfigured()) {
+    onChange(new Map())
+    return () => {}
+  }
+  return configuredClient().subscribeToCommentModeration(articleCid, onChange, onError)
 }
