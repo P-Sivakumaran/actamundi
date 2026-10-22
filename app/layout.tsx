@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Bodoni_Moda, Lato, Newsreader, Instrument_Sans, JetBrains_Mono } from 'next/font/google'
+import { Bodoni_Moda, Lato, Newsreader, Instrument_Sans, M_PLUS_Code_Latin, EB_Garamond } from 'next/font/google'
 import './globals.css'
 import './motion.css'
 import { NetworkIndicator } from '@/components/NetworkIndicator'
@@ -13,11 +13,22 @@ import Link from 'next/link'
 import { ErrorProvider } from '@/components/providers/ErrorProvider'
 import { CopyrightYear } from '@/components/ui/copyright-year'
 import { GlobeMark } from '@/components/brand/GlobeMark'
+import { MobileNav } from '@/components/MobileNav'
+import { HeaderProfileLink } from '@/components/HeaderProfileLink'
 
-// Masthead only — hairlines read beautifully at display sizes.
+// WalletCoin's coin face only now — the wordmark moved to EB Garamond below.
 const bodoniModa = Bodoni_Moda({
   subsets: ['latin'],
   variable: '--font-bodoni-moda',
+  display: 'swap',
+})
+
+// Wordmark — extrabold italic, mixed case, tight tracking.
+const ebGaramond = EB_Garamond({
+  subsets: ['latin'],
+  weight: ['800'],
+  style: ['italic'],
+  variable: '--font-eb-garamond',
   display: 'swap',
 })
 
@@ -38,7 +49,10 @@ const instrumentSans = Instrument_Sans({
 })
 
 // Wallet addresses, CIDs, signatures — content, so they get their own voice.
-const jetbrainsMono = JetBrains_Mono({
+// Latin-only monospace (not M PLUS 1 Code, which carries a full Japanese
+// glyph set this app never uses) — variable font, so callers pick a weight
+// via ordinary CSS font-weight rather than this loading a fixed set.
+const mplusCodeLatin = M_PLUS_Code_Latin({
   subsets: ['latin'],
   variable: '--font-mono',
   display: 'swap',
@@ -65,7 +79,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${bodoniModa.variable} ${newsreader.variable} ${instrumentSans.variable} ${jetbrainsMono.variable} ${lato.variable}`}
+      className={`${bodoniModa.variable} ${ebGaramond.variable} ${newsreader.variable} ${instrumentSans.variable} ${mplusCodeLatin.variable} ${lato.variable}`}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased bg-background text-foreground">
@@ -80,17 +94,17 @@ export default function RootLayout({
                       <Link href="/" className="flex items-center gap-2 mr-8" aria-label="ActaMundi home">
                         {/* Fans open once on first load, then rests. No idle rotation in the header. */}
                         <GlobeMark size={36} rotate={false} interactive={false} label="" />
-                        <span className="am-wordmark text-lg text-foreground">Acta Mundi</span>
+                        <span className="am-wordmark text-lg text-foreground">ActaMundi</span>
                       </Link>
 
                       <nav className="hidden md:flex items-center space-x-6">
-                        <Link href="/politics" className="text-sm font-medium text-gray-700 hover:text-primary transition-colors dark:text-gray-300">
+                        <Link href="/articles?category=Politics" className="text-sm font-medium text-gray-700 hover:text-primary transition-colors dark:text-gray-300">
                           Politics
                         </Link>
-                        <Link href="/culture" className="text-sm font-medium text-gray-700 hover:text-primary transition-colors dark:text-gray-300">
+                        <Link href="/articles?category=Culture" className="text-sm font-medium text-gray-700 hover:text-primary transition-colors dark:text-gray-300">
                           Culture
                         </Link>
-                        <Link href="/ideas" className="text-sm font-medium text-gray-700 hover:text-primary transition-colors dark:text-gray-300">
+                        <Link href="/articles?category=Ideas" className="text-sm font-medium text-gray-700 hover:text-primary transition-colors dark:text-gray-300">
                           Ideas
                         </Link>
                       </nav>
@@ -99,46 +113,24 @@ export default function RootLayout({
                     <div className="flex items-center space-x-4">
                       <ThemeSwitcher />
                       <NetworkIndicator />
-                      <Link href="/subscribe" className="hidden md:inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
+                      <HeaderProfileLink />
+                      <Link href="/articles" className="hidden md:inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
                         Subscribe
                       </Link>
+                      <MobileNav />
                     </div>
                   </div>
                 </header>
                 <main id="main-content" className="flex-1 container py-8 bg-white dark:bg-gray-800 rounded-xl shadow-md border border-border my-8">{children}</main>
                 <footer className="border-t bg-muted/40">
                   <div className="container py-12">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+                    <div className="flex justify-center mb-8">
                       <div>
-                        <h3 className="text-sm font-semibold text-foreground tracking-wider uppercase mb-4">About</h3>
-                        <ul className="space-y-3">
-                          <li><Link href="/about" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">About Us</Link></li>
-                          <li><Link href="/contact" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Contact</Link></li>
-                          <li><Link href="/careers" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Careers</Link></li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-foreground tracking-wider uppercase mb-4">Sections</h3>
-                        <ul className="space-y-3">
-                          <li><Link href="/politics" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Politics</Link></li>
-                          <li><Link href="/culture" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Culture</Link></li>
-                          <li><Link href="/ideas" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Ideas</Link></li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-foreground tracking-wider uppercase mb-4">Legal</h3>
-                        <ul className="space-y-3">
-                          <li><Link href="/privacy" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Privacy Policy</Link></li>
-                          <li><Link href="/terms" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Terms of Service</Link></li>
-                          <li><Link href="/cookies" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Cookie Policy</Link></li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-foreground tracking-wider uppercase mb-4">Connect</h3>
-                        <ul className="space-y-3">
-                          <li><Link href="/newsletter" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Newsletter</Link></li>
-                          <li><Link href="/rss" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">RSS Feed</Link></li>
-                          <li><Link href="/social" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Social Media</Link></li>
+                        <h3 className="text-sm font-semibold text-foreground tracking-wider uppercase mb-4 text-center">Sections</h3>
+                        <ul className="flex gap-6">
+                          <li><Link href="/articles?category=Politics" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Politics</Link></li>
+                          <li><Link href="/articles?category=Culture" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Culture</Link></li>
+                          <li><Link href="/articles?category=Ideas" className="text-sm text-gray-700 hover:text-primary dark:text-gray-300">Ideas</Link></li>
                         </ul>
                       </div>
                     </div>

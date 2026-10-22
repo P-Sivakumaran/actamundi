@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 import { Network, detectNetwork, getNetworkConfig } from '@/lib/blockchain';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
 import { Check, CopyIcon, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function NetworkIndicator() {
+  const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   const [network, setNetwork] = useState<Network>('ethereum');
   const [isConnected, setIsConnected] = useState(false);
@@ -60,7 +62,11 @@ export function NetworkIndicator() {
 
   const handleConnect = async () => {
     if (typeof window === 'undefined' || !window.ethereum) {
-      alert('Please install MetaMask to use this dApp');
+      toast({
+        title: 'No wallet found',
+        description: 'Install MetaMask or another browser wallet to connect.',
+        variant: 'destructive',
+      });
       return;
     }
 

@@ -12,6 +12,11 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const TRUTH_VERIFICATION_ADDRESS = process.env.NEXT_PUBLIC_TRUTH_VERIFICATION_ADDRESS;
+// Opt-in per deployment, same as moderation/writer-subscriptions — an
+// instance that hasn't deployed the contract yet isn't an error state, so
+// every call site below checks this instead of crashing on a bare
+// `ethers.Contract(undefined, ...)`.
+const TRUTH_VERIFICATION_CONFIGURED = !!TRUTH_VERIFICATION_ADDRESS;
 const TRUTH_VERIFICATION_ABI = [
   "function submitClaim(string _content, string _source) external returns (bytes32)",
   "function verifyClaim(bytes32 _claimId) external",
@@ -74,8 +79,8 @@ export function TruthVerification() {
   const { toast } = useToast();
 
   useEffect(() => {
+    if (!TRUTH_VERIFICATION_CONFIGURED) return;
     if (typeof window !== 'undefined' && window.ethereum) {
-      if (!window.ethereum) throw new Error('No wallet found');
       const provider = new ethers.BrowserProvider(window.ethereum);
       const contract = new ethers.Contract(
         TRUTH_VERIFICATION_ADDRESS!,
@@ -144,6 +149,7 @@ export function TruthVerification() {
 
     setIsLoading(true);
     try {
+      if (!TRUTH_VERIFICATION_CONFIGURED) throw new Error('Truth verification is not set up on this deployment yet');
       if (!window.ethereum) throw new Error('No wallet found');
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
@@ -178,6 +184,7 @@ export function TruthVerification() {
   const handleVerifyClaim = async (claimId: string) => {
     setIsLoading(true);
     try {
+      if (!TRUTH_VERIFICATION_CONFIGURED) throw new Error('Truth verification is not set up on this deployment yet');
       if (!window.ethereum) throw new Error('No wallet found');
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
@@ -209,6 +216,7 @@ export function TruthVerification() {
   const handleDisputeClaim = async (claimId: string) => {
     setIsLoading(true);
     try {
+      if (!TRUTH_VERIFICATION_CONFIGURED) throw new Error('Truth verification is not set up on this deployment yet');
       if (!window.ethereum) throw new Error('No wallet found');
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
@@ -249,6 +257,7 @@ export function TruthVerification() {
 
     setIsLoading(true);
     try {
+      if (!TRUTH_VERIFICATION_CONFIGURED) throw new Error('Truth verification is not set up on this deployment yet');
       if (!window.ethereum) throw new Error('No wallet found');
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
@@ -284,6 +293,7 @@ export function TruthVerification() {
   const handleWithdrawStake = async (amount: string) => {
     setIsLoading(true);
     try {
+      if (!TRUTH_VERIFICATION_CONFIGURED) throw new Error('Truth verification is not set up on this deployment yet');
       if (!window.ethereum) throw new Error('No wallet found');
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();

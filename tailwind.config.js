@@ -47,7 +47,7 @@ module.exports = {
   			],
   			mono: [
   				'var(--font-mono)',
-  				'JetBrains Mono',
+  				'M PLUS Code Latin',
   				'ui-monospace',
   				'SFMono-Regular',
   				'Menlo',

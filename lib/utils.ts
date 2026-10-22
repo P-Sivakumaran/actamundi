@@ -24,3 +24,11 @@ export function fallbackGradient(cid: string): string {
   for (let i = 0; i < cid.length; i++) hash = (hash * 31 + cid.charCodeAt(i)) >>> 0
   return FALLBACK_GRADIENTS[hash % FALLBACK_GRADIENTS.length]
 }
+
+export function formatBytes(bytes: number): string {
+  if (!bytes || bytes <= 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB']
+  const exp = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
+  const value = bytes / Math.pow(1024, exp)
+  return `${exp === 0 ? value : value.toFixed(1)} ${units[exp]}`
+}

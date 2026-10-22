@@ -55,6 +55,11 @@
     --color-success-500: 145 70% 50%;
     --color-success-600: 145 65% 40%;
     --color-success-700: 145 60% 35%;
+    /* White text on -700 is still only 4.10:1 (below AA's 4.5:1) — see
+     * lib/accessibility/__tests__/contrast.test.ts. -800 continues the same
+     * S/L step the other primitive scales already use between their own
+     * -700/-800 (teal, coral: S-5, L-10). */
+    --color-success-800: 145 55% 30%;
     
     --color-warning-50: 45 100% 96%;
     --color-warning-100: 45 90% 92%;
@@ -139,29 +144,38 @@
     --color-popover: var(--color-warm-gray-100);
     --color-popover-foreground: 200 30% 10%;
     
-    /* Brand colors - semantic aliases for primitive colors */
-    --color-primary: var(--color-teal-500);
+    /* Brand colors - semantic aliases for primitive colors
+     * primary/secondary/accent/success/error/destructive/info below use a
+     * darker primitive step than the original -500 — white text on -500
+     * failed WCAG AA (as low as 1.60:1 for primary); see
+     * lib/accessibility/__tests__/contrast.test.ts for the full audit and
+     * lib/accessibility/contrast.ts for the module that checks it. HSL's
+     * "lightness" doesn't track perceptual/WCAG luminance, especially for
+     * cyan-leaning hues like teal — a visually "mid" -500 can still be too
+     * light for white text once actually measured. warning was already
+     * correct (black-on-yellow); that's the one color this pass didn't touch. */
+    --color-primary: var(--color-teal-800);
     --color-primary-foreground: 0 0% 100%;
-    
-    --color-secondary: var(--color-warm-gray-500);
+
+    --color-secondary: var(--color-warm-gray-700);
     --color-secondary-foreground: 0 0% 100%;
-    
-    --color-accent: var(--color-coral-500);
+
+    --color-accent: var(--color-coral-600);
     --color-accent-foreground: 0 0% 100%;
-    
+
     /* Feedback colors for UI states */
-    --color-success: var(--color-success-500);
+    --color-success: var(--color-success-800);
     --color-success-foreground: 0 0% 100%;
-    
+
     --color-warning: var(--color-warning-500);
     --color-warning-foreground: 0 0% 0%;
-    
-    --color-error: var(--color-error-500);
+
+    --color-error: var(--color-error-600);
     --color-error-foreground: 0 0% 100%;
-    --color-destructive: var(--color-error-500);
+    --color-destructive: var(--color-error-600);
     --color-destructive-foreground: 0 0% 100%;
-    
-    --color-info: var(--color-info-500);
+
+    --color-info: var(--color-info-700);
     --color-info-foreground: 0 0% 100%;
     
     /* UI element colors */
@@ -270,19 +284,24 @@
     --color-accent: 15 80% 65%;
     --color-accent-foreground: 15 20% 10%;
     
-    --color-success: 145 70% 50%;
-    --color-success-foreground: 0 0% 100%;
-    
+    /* Same treatment primary/secondary/accent/warning already use (bright
+     * saturated bg + near-black same-hue foreground) rather than the light
+     * mode fix's darker-bg-with-white-text — a dark-L badge would blend into
+     * the dark page background even though white-on-it would pass text
+     * contrast on its own. See lib/accessibility/__tests__/contrast.test.ts. */
+    --color-success: 145 80% 65%;
+    --color-success-foreground: 145 20% 10%;
+
     --color-warning: 45 85% 60%;
     --color-warning-foreground: 45 100% 10%;
-    
-    --color-error: 0 75% 55%;
-    --color-error-foreground: 0 0% 100%;
-    --color-destructive: 0 75% 55%;
-    --color-destructive-foreground: 0 0% 100%;
-    
-    --color-info: 200 80% 60%;
-    --color-info-foreground: 0 0% 100%;
+
+    --color-error: 0 80% 65%;
+    --color-error-foreground: 0 20% 10%;
+    --color-destructive: 0 80% 65%;
+    --color-destructive-foreground: 0 20% 10%;
+
+    --color-info: 200 80% 65%;
+    --color-info-foreground: 200 20% 10%;
     
     --color-muted: 220 15% 12%;
     --color-muted-foreground: 220 10% 65%;
@@ -578,4 +597,48 @@ body {
 .prose-container {
   max-width: 75ch;
   margin-inline: auto;
+}
+
+/* Inline video embeds from RichTextEditor's video-extension.ts — fit the
+ * article's reading width instead of overflowing at the uploaded file's
+ * native resolution. */
+.am-article-video {
+  max-width: 100%;
+  width: 100%;
+  border-radius: var(--radius-lg);
+  margin-block: var(--space-4);
+}
+
+/* Inline audio embeds from RichTextEditor's audio-extension.ts — native
+ * <audio controls> is already narrow, just needs to not stretch oddly. */
+.am-article-audio {
+  width: 100%;
+  margin-block: var(--space-4);
+}
+
+/* Generic file-download card from attachment-extension.ts — content that
+ * can't be rendered inline (PDFs, docs, zips) gets a clickable card
+ * instead of a bare text link lost in the article body. */
+.am-article-attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block: var(--space-4);
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--foreground);
+  background: var(--muted);
+  transition: background-color 0.15s ease;
+}
+
+.am-article-attachment:hover {
+  background: var(--accent);
+}
+
+.am-article-attachment::before {
+  content: '📎';
 }

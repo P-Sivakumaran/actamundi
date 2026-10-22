@@ -4,6 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { ethers } from 'ethers'
 
 const WRITER_SUBSCRIPTIONS_ADDRESS = process.env.NEXT_PUBLIC_WRITER_SUBSCRIPTIONS_ADDRESS
+// Opt-in per deployment, same as moderation (lib/p2p/moderation.ts) — a
+// instance that hasn't deployed/configured the contract yet isn't an error
+// state, so every caller below checks this instead of crashing on a bare
+// `ethers.Contract(undefined, ...)`.
+const WRITER_SUBSCRIPTIONS_CONFIGURED = !!WRITER_SUBSCRIPTIONS_ADDRESS
 
 const WRITER_SUBSCRIPTIONS_ABI = [
   'function subscribe(address writer, uint256 ratePerSecond) external payable',
@@ -50,6 +55,7 @@ export function useWriterSubscriptions() {
   const [error, setError] = useState<string | null>(null)
 
   const getContract = useCallback(async (needsSigner: boolean) => {
+    if (!WRITER_SUBSCRIPTIONS_CONFIGURED) throw new Error('Writer subscriptions are not set up on this deployment yet')
     if (typeof window === 'undefined' || !window.ethereum) throw new Error('No wallet found')
     const provider = new ethers.BrowserProvider(window.ethereum)
     const signerOrProvider = needsSigner ? await provider.getSigner() : provider
@@ -89,22 +95,27 @@ export function useWriterSubscriptions() {
   // as useTruthVerification's contract.on(...) listeners, filtered to events
   // naming the connected account.
   useEffect(() => {
+    if (!WRITER_SUBSCRIPTIONS_CONFIGURED) return
     if (typeof window === 'undefined' || !window.ethereum) return
     let contract: ethers.Contract | undefined
     let cancelled = false
 
     ;(async () => {
-      contract = await getContract(false)
-      if (cancelled) return
-      const onChange = () => { refreshSubscription(); refreshEarnings() }
-      contract.on('Subscribed', onChange)
-      contract.on('RateChanged', onChange)
-      contract.on('WriterSwitched', onChange)
-      contract.on('Deposited', onChange)
-      contract.on('Unsubscribed', onChange)
-      contract.on('Withdrawn', onChange)
-      refreshSubscription()
-      refreshEarnings()
+      try {
+        contract = await getContract(false)
+        if (cancelled) return
+        const onChange = () => { refreshSubscription(); refreshEarnings() }
+        contract.on('Subscribed', onChange)
+        contract.on('RateChanged', onChange)
+        contract.on('WriterSwitched', onChange)
+        contract.on('Deposited', onChange)
+        contract.on('Unsubscribed', onChange)
+        contract.on('Withdrawn', onChange)
+        refreshSubscription()
+        refreshEarnings()
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load writer subscription')
+      }
     })()
 
     return () => {
