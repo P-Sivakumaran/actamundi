@@ -1,0 +1,10 @@
+{
+  "description": "Enables users to efficiently review and analyze the ActaMundi repository, streamlining code assessment and collaboration for developers.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
