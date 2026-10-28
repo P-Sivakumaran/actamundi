@@ -24,6 +24,10 @@ function sanitizeImageSrc(src: string | undefined): string | undefined {
   return undefined
 }
 
+function escapePlainText(value: string): string {
+  return value.replace(/[&<>"']/g, '')
+}
+
 export function ArticleFeedCard({
   article,
   coverImageUrl,
@@ -41,6 +45,7 @@ export function ArticleFeedCard({
   linkToArticle?: boolean
 }) {
   const safeCoverImageUrl = sanitizeImageSrc(coverImageUrl)
+  const safeTitle = escapePlainText(article.title)
   const content = (
     <>
       {safeCoverImageUrl ? (
@@ -69,7 +74,7 @@ export function ArticleFeedCard({
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-        <h2 className="text-xl font-bold leading-tight line-clamp-3">{article.title}</h2>
+        <h2 className="text-xl font-bold leading-tight line-clamp-3">{safeTitle}</h2>
         {article.excerpt && (
           <p className="mt-2 text-sm text-white/80 line-clamp-2">{article.excerpt}</p>
         )}
@@ -106,7 +111,7 @@ export function ArticleFeedCard({
       {linkToArticle && (
         <Link
           href={`/articles/${encodeURIComponent(article.cid)}`}
-          aria-label={`Read article: ${article.title}`}
+          aria-label={`Read article: ${safeTitle}`}
           className="absolute inset-0 z-0"
         />
       )}
