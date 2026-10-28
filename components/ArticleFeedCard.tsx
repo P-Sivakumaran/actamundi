@@ -6,6 +6,24 @@ import { cn, truncateAddress, fallbackGradient } from '@/lib/utils'
 import type { P2PArticle } from '@/models/P2PArticle'
 import type { ModerationAction } from '@/lib/p2p/moderation'
 
+const SAFE_IMAGE_PROTOCOLS = new Set(['https:', 'http:'])
+const SAFE_DATA_IMAGE_RE = /^data:image\/(?:png|jpeg|jpg|webp|gif|avif);base64,[A-Za-z0-9+/=]+$/
+
+function sanitizeImageSrc(src: string | undefined): string | undefined {
+  if (!src) return undefined
+  if (src.startsWith('/')) return src
+  if (SAFE_DATA_IMAGE_RE.test(src)) return src
+  try {
+    const parsed = new URL(src)
+    if (SAFE_IMAGE_PROTOCOLS.has(parsed.protocol)) {
+      return parsed.toString()
+    }
+  } catch {
+    // Reject malformed URLs
+  }
+  return undefined
+}
+
 export function ArticleFeedCard({
   article,
   coverImageUrl,
@@ -22,11 +40,12 @@ export function ArticleFeedCard({
    * editing state by acting like a link out of the form. */
   linkToArticle?: boolean
 }) {
+  const safeCoverImageUrl = sanitizeImageSrc(coverImageUrl)
   const content = (
     <>
-      {coverImageUrl ? (
+      {safeCoverImageUrl ? (
         <Image
-          src={coverImageUrl}
+          src={safeCoverImageUrl}
           alt=""
           fill
           priority={priority}
@@ -55,7 +74,7 @@ export function ArticleFeedCard({
           <p className="mt-2 text-sm text-white/80 line-clamp-2">{article.excerpt}</p>
         )}
         <div className="mt-3 flex items-center gap-3 text-xs text-white/70">
-          <Link href={`/profile/${article.authorAddr}`} className="relative z-10 hover:text-white hover:underline">
+          <Link href={`/profile/${encodeURIComponent(article.authorAddr)}`} className="relative z-10 hover:text-white hover:underline">
             {truncateAddress(article.authorAddr)}
           </Link>
           <span>{new Date(article.createdAt).toLocaleDateString()}</span>
@@ -86,7 +105,7 @@ export function ArticleFeedCard({
     <div className={className}>
       {linkToArticle && (
         <Link
-          href={`/articles/${article.cid}`}
+          href={`/articles/${encodeURIComponent(article.cid)}`}
           aria-label={`Read article: ${article.title}`}
           className="absolute inset-0 z-0"
         />

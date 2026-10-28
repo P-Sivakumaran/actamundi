@@ -42,6 +42,8 @@ interface ArticleFormProps {
   onCancel: () => void
 }
 
+const SAFE_DATA_IMAGE_RE = /^data:image\/(?:png|jpeg|jpg|webp|gif|avif);base64,[A-Za-z0-9+/=]+$/
+
 /** Shared by the new-article and edit-article admin pages — same fields,
  * same live preview, different initial values and submit behavior. */
 export function ArticleForm({
@@ -92,7 +94,12 @@ export function ArticleForm({
     if (!file) return
     setImageFile(file)
     const reader = new FileReader()
-    reader.onloadend = () => setImagePreview(reader.result as string)
+    reader.onloadend = () => {
+      const result = typeof reader.result === 'string' ? reader.result : ''
+      if (SAFE_DATA_IMAGE_RE.test(result)) {
+        setImagePreview(result)
+      }
+    }
     reader.readAsDataURL(file)
   }
 
@@ -160,7 +167,7 @@ export function ArticleForm({
                   <Input
                     id="coverImage"
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
                     onChange={handleImageUpload}
                     className="flex-1"
                   />
