@@ -56,7 +56,7 @@ export default function DemoPage() {
           <h2 className="text-2xl font-serif mb-4">Hybrid Approach</h2>
           <p className="text-muted-foreground mb-4">
             This demo showcases a hybrid approach combining Tailwind CSS with styled-components.
-            This gives us the best of both worlds: Tailwind's utility classes for rapid development
+            This gives us the best of both worlds: Tailwind&apos;s utility classes for rapid development
             and styled-components for complex, dynamic styling.
           </p>
         </Card>

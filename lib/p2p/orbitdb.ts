@@ -5,11 +5,11 @@
  *
  * Requires: npm install @orbitdb/core
  */
-import { createOrbitDB, useAccessController, type OrbitDB } from '@orbitdb/core'
+import { createOrbitDB, useAccessController as registerAccessController, type OrbitDB } from '@orbitdb/core'
 import { getP2PNode } from './node'
 import { AuthorAccessController } from './access-controller'
 
-useAccessController(AuthorAccessController as any)
+registerAccessController(AuthorAccessController as any)
 
 let orbitdb: OrbitDB | null = null
 let initPromise: Promise<OrbitDB> | null = null

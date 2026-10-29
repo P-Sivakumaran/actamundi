@@ -7,7 +7,7 @@ export default function VerifyPage() {
         <h1 className="text-4xl font-bold mb-8">Truth Verification System</h1>
         <div className="prose prose-lg mb-8">
           <p>
-            ActaMundi's Truth Verification System uses blockchain technology to create a decentralized,
+            ActaMundi&apos;s Truth Verification System uses blockchain technology to create a decentralized,
             transparent, and immutable record of verified information. This system allows users to:
           </p>
           <ul>

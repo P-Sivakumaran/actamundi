@@ -32,7 +32,7 @@ export default function ErrorPage({
             Something went wrong
           </h2>
           <p className="text-fluid-lg text-muted-foreground space-fluid-5">
-            We're sorry, but we encountered an unexpected error while processing your request.
+            We&apos;re sorry, but we encountered an unexpected error while processing your request.
           </p>
           
           {errorId && (
