@@ -244,10 +244,10 @@ export default function ComponentsDemo() {
             <h2 className="text-xl font-semibold tracking-tight">Paragraphs</h2>
             <div className="space-y-6">
               <p className="text-lg leading-7">
-                This is a large paragraph with good readability. We've designed the typography to provide excellent reading experiences across all screens.
+                This is a large paragraph with good readability. We&apos;ve designed the typography to provide excellent reading experiences across all screens.
               </p>
               <p className="text-base leading-7">
-                This is the default paragraph size. It's designed for optimal readability and comfortable reading across different screen sizes and lighting conditions. The text has enough contrast in both light and dark modes.
+                This is the default paragraph size. It&apos;s designed for optimal readability and comfortable reading across different screen sizes and lighting conditions. The text has enough contrast in both light and dark modes.
               </p>
               <p className="text-sm leading-6 text-muted-foreground">
                 This is a smaller paragraph often used for less important information, captions, or supporting text in a user interface.
@@ -356,7 +356,7 @@ export default function ComponentsDemo() {
                 </CardHeader>
                 <CardContent className="pt-6">
                   <p>Cards can be customized with different background treatments, borders and spacing.</p>
-                  <p className="text-muted-foreground text-sm mt-2">They're great for organizing content into digestible sections.</p>
+                  <p className="text-muted-foreground text-sm mt-2">They&apos;re great for organizing content into digestible sections.</p>
                 </CardContent>
                 <CardFooter className="border-t flex justify-end gap-2">
                   <Button variant="outline" size="sm">Back</Button>
